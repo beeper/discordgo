@@ -33,6 +33,7 @@ var (
 	EndpointWebhooks       = EndpointAPI + "webhooks/"
 	EndpointStickers       = EndpointAPI + "stickers/"
 	EndpointStageInstances = EndpointAPI + "stage-instances"
+	EndpointStickerImages  = EndpointDiscord + "stickers/"
 
 	EndpointCDN             = "https://cdn.discordapp.com/"
 	EndpointCDNAttachments  = EndpointCDN + "attachments/"
@@ -155,7 +156,7 @@ var (
 		case StickerFormatTypeGIF:
 			ext = ".gif"
 		}
-		return EndpointCDNStickers + sID + ext
+		return EndpointStickerImages + sID + ext
 	}
 	EndpointNitroStickersPacks = EndpointAPI + "/sticker-packs"
 
