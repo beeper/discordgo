@@ -100,7 +100,7 @@ func (s *Session) SetGatewayURL(url string) {
 
 var apiVersionRegex = regexp.MustCompile(`API_VERSION: (\d+),`)
 var gatewayURLRegex = regexp.MustCompile(`GATEWAY_ENDPOINT:\s?['"](.+?)['"],`)
-var mainJSRegex = regexp.MustCompile(`src="(/assets/web.[a-f0-9]{20}.js)"`)
+var mainJSRegex = regexp.MustCompile(`src="(/assets/web.[a-f0-9]+.js)"`)
 var buildNumberRegex = regexp.MustCompile(`(?:buildNumber|build_number):\s?['"]?(\d{6,})['"]?`)
 
 func (s *Session) LoadMainPage(ctx context.Context) error {
