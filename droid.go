@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -39,21 +41,41 @@ const (
 	DroidBrowserUserAgent    = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + DroidBrowserVersion + " Safari/537.36"
 )
 
+// BaseProperties contains the data common to both the X-Super-Properties header value
+// and the properties sent during IDENTIFY.
+type BaseProperties struct {
+	OS                     string          `json:"os"`
+	Browser                string          `json:"browser"`
+	Device                 string          `json:"device"`
+	SystemLocale           string          `json:"system_locale"`
+	HasClientMods          bool            `json:"has_client_mods"`
+	BrowserUserAgent       string          `json:"browser_user_agent"`
+	BrowserVersion         string          `json:"browser_version"`
+	OSVersion              string          `json:"os_version"`
+	Referrer               string          `json:"referrer"`
+	ReferringDomain        string          `json:"referring_domain"`
+	ReferrerCurrent        string          `json:"referrer_current"`
+	ReferringDomainCurrent string          `json:"referring_domain_current"`
+	ReleaseChannel         string          `json:"release_channel"`
+	ClientBuildNumber      int             `json:"client_build_number"`
+	ClientEventSource      *string         `json:"client_event_source"`
+	ClientLaunchID         uuid.UUID       `json:"client_launch_id"`
+	LaunchSignature        LaunchSignature `json:"launch_signature"`
+	// ClientAppState is either "unfocused" or "focused".
+	ClientAppState string `json:"client_app_state"`
+}
+
+// SuperProperties is sent as the X-Super-Properties header.
+type SuperProperties struct {
+	BaseProperties
+	ClientHeartbeatSessionID uuid.UUID `json:"client_heartbeat_session_id"`
+}
+
+// UserIdentifyProperties is sent when IDENTIFYing to the gateway.
 type UserIdentifyProperties struct {
-	OS                     string  `json:"os"`
-	Browser                string  `json:"browser"`
-	Device                 string  `json:"device"`
-	SystemLocale           string  `json:"system_locale"`
-	BrowserUserAgent       string  `json:"browser_user_agent"`
-	BrowserVersion         string  `json:"browser_version"`
-	OSVersion              string  `json:"os_version"`
-	Referrer               string  `json:"referrer"`
-	ReferringDomain        string  `json:"referring_domain"`
-	ReferrerCurrent        string  `json:"referrer_current"`
-	ReferringDomainCurrent string  `json:"referring_domain_current"`
-	ReleaseChannel         string  `json:"release_channel"`
-	ClientBuildNumber      int     `json:"client_build_number"`
-	ClientEventSource      *string `json:"client_event_source"`
+	BaseProperties
+	IsFastConnect         bool   `json:"is_fast_connect"`
+	GatewayConnectReasons string `json:"gateway_connect_reasons"`
 }
 
 type ClientState struct {
@@ -84,13 +106,47 @@ func basedOn(base map[string]string, additional map[string]string) map[string]st
 	return additional
 }
 
-func UpdateVersion(version, capabilities int) {
+func (s *Session) UpdateVersion(version, capabilities int) {
 	droidClientBuildNumber = version
 	droidCapabilities = capabilities
-	droidIdentifyProperties.ClientBuildNumber = version
-	DroidFetchHeaders["X-Super-Properties"] = mustMarshalJSON(droidIdentifyProperties)
-	DroidDownloadHeaders["X-Super-Properties"] = DroidFetchHeaders["X-Super-Properties"]
-	DroidImageHeaders["X-Super-Properties"] = DroidFetchHeaders["X-Super-Properties"]
+	droidBaseProperties.ClientBuildNumber = version
+	s.UpdateUserHeaders()
+}
+
+func (s *Session) UpdateUserHeaders() {
+	superProps := SuperProperties{
+		BaseProperties:           *droidBaseProperties,
+		ClientHeartbeatSessionID: s.heartbeatSessionID,
+	}
+
+	superPropsHeader := "X-Super-Properties"
+	s.fetchHeaders = basedOn(DroidBaseHeaders, map[string]string{
+		"Sec-Fetch-Dest":     "empty",
+		"Sec-Fetch-Mode":     "cors",
+		"Sec-Fetch-Site":     "same-origin",
+		"X-Debug-Options":    "bugReporterEnabled",
+		"X-Discord-Locale":   droidSystemLocale,
+		"X-Discord-Timezone": "UTC",
+		superPropsHeader:     mustMarshalJSON(superProps),
+	})
+	s.downloadHeaders = basedOn(s.fetchHeaders, map[string]string{
+		"Sec-Fetch-Mode": "no-cors",
+		superPropsHeader: mustMarshalJSON(superProps),
+	})
+	s.imageHeaders = basedOn(s.downloadHeaders, map[string]string{
+		"Accept":         "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+		"Sec-Fetch-Dest": "image",
+		superPropsHeader: mustMarshalJSON(superProps),
+	})
+
+	identifyProps := UserIdentifyProperties{
+		BaseProperties:        *droidBaseProperties,
+		IsFastConnect:         false,
+		GatewayConnectReasons: "AppSkeleton",
+	}
+	identifyProps.LaunchSignature = s.launchSignature
+	identifyProps.ClientLaunchID = s.launchID
+	s.Identify.Properties = identifyProps
 }
 
 func (s *Session) SetGatewayURL(url string) {
@@ -184,14 +240,14 @@ func (s *Session) LoadMainPage(ctx context.Context) error {
 	}
 	s.log(LogInformational, "Found build number %d from JS file %s", buildNumberInt, string(mainJSMatch[1]))
 	// TODO parse capabilities too?
-	UpdateVersion(buildNumberInt, droidCapabilities)
+	s.UpdateVersion(buildNumberInt, droidCapabilities)
 	mainPageLoaded = true
 
 	return nil
 }
 
 var (
-	droidIdentifyProperties = &UserIdentifyProperties{
+	droidBaseProperties = &BaseProperties{
 		OS:               droidOS,
 		OSVersion:        droidOSVersion,
 		Browser:          droidBrowser,
@@ -202,6 +258,7 @@ var (
 		ClientBuildNumber: droidClientBuildNumber,
 		ReleaseChannel:    droidReleaseChannel,
 		SystemLocale:      droidSystemLocale,
+		ClientAppState:    "focused",
 	}
 	DroidBaseHeaders = map[string]string{
 		"Sec-Ch-Ua":          fmt.Sprintf(`" Not A;Brand";v="99", "Chromium";v="%[1]s", "Google Chrome";v="%[1]s"`, DroidBrowserMajorVersion),
@@ -213,15 +270,7 @@ var (
 		"Accept-Language": "en-US,en;q=0.9",
 		"User-Agent":      DroidBrowserUserAgent,
 	}
-	DroidFetchHeaders = basedOn(DroidBaseHeaders, map[string]string{
-		"Sec-Fetch-Dest":     "empty",
-		"Sec-Fetch-Mode":     "cors",
-		"Sec-Fetch-Site":     "same-origin",
-		"X-Debug-Options":    "bugReporterEnabled",
-		"X-Discord-Locale":   droidSystemLocale,
-		"X-Discord-Timezone": "UTC",
-		"X-Super-Properties": mustMarshalJSON(droidIdentifyProperties),
-	})
+	DroidFetchHeaders    = basedOn(DroidBaseHeaders, map[string]string{})
 	DroidDownloadHeaders = basedOn(DroidFetchHeaders, map[string]string{
 		"Sec-Fetch-Mode": "no-cors",
 	})

@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -66,12 +67,17 @@ func New(token string) (s *Session, err error) {
 	s.Token = token
 
 	if token != "" && !strings.HasPrefix(token, "Bot ") {
+		sig, err := NewVanillaSignature()
+		if err != nil {
+			return nil, err
+		}
+
 		s.Identify.Presence.Activities = make([]Activity, 0)
 		s.Identify.Compress = false
 		s.Identify.LargeThreshold = 0
 		s.Identify.Presence.Status = droidStatus
 		s.Identify.Presence.AFK = true
-		s.Identify.Properties = droidIdentifyProperties
+
 		s.Identify.Capabilities = droidCapabilities
 		s.Identify.ClientState = &ClientState{
 			//HighestLastMessageID:     "0",
@@ -84,6 +90,11 @@ func New(token string) (s *Session, err error) {
 		s.Identify.Intents = 0
 
 		s.UserAgent = DroidBrowserUserAgent
+
+		s.launchSignature = sig
+		s.launchID = uuid.New()
+		s.heartbeatSessionID = uuid.New()
+		s.UpdateUserHeaders()
 
 		s.IsUser = true
 	}

@@ -263,9 +263,9 @@ func (s *Session) RequestWithLockedBucket(method, urlStr, contentType string, b 
 	req.Header.Set("User-Agent", s.UserAgent)
 
 	if s.IsUser {
-		headers := DroidFetchHeaders
+		headers := s.fetchHeaders
 		if strings.HasPrefix(urlStr, "https://cdn.discordapp.com") {
-			headers = DroidDownloadHeaders
+			headers = s.downloadHeaders
 		}
 		for key, value := range headers {
 			req.Header.Set(key, value)
