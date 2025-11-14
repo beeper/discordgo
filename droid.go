@@ -114,8 +114,12 @@ func (s *Session) UpdateVersion(version, capabilities int) {
 }
 
 func (s *Session) UpdateUserHeaders() {
+	baseProps := *droidBaseProperties
+	baseProps.LaunchSignature = s.launchSignature
+	baseProps.ClientLaunchID = s.launchID
+
 	superProps := SuperProperties{
-		BaseProperties:           *droidBaseProperties,
+		BaseProperties:           baseProps,
 		ClientHeartbeatSessionID: s.heartbeatSessionID,
 	}
 
@@ -140,12 +144,10 @@ func (s *Session) UpdateUserHeaders() {
 	})
 
 	identifyProps := UserIdentifyProperties{
-		BaseProperties:        *droidBaseProperties,
+		BaseProperties:        baseProps,
 		IsFastConnect:         false,
 		GatewayConnectReasons: "AppSkeleton",
 	}
-	identifyProps.LaunchSignature = s.launchSignature
-	identifyProps.ClientLaunchID = s.launchID
 	s.Identify.Properties = identifyProps
 }
 
