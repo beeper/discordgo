@@ -276,10 +276,6 @@ var (
 	DroidDownloadHeaders = basedOn(DroidFetchHeaders, map[string]string{
 		"Sec-Fetch-Mode": "no-cors",
 	})
-	DroidImageHeaders = basedOn(DroidDownloadHeaders, map[string]string{
-		"Accept":         "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-		"Sec-Fetch-Dest": "image",
-	})
 
 	DroidWSHeaders = map[string]string{
 		"User-Agent":      DroidBrowserUserAgent,
