@@ -124,6 +124,7 @@ func (s *Session) UpdateUserHeaders() {
 	}
 
 	superPropsHeader := "X-Super-Properties"
+	encodedSuperProps := mustMarshalJSON(superProps)
 	s.fetchHeaders = basedOn(DroidBaseHeaders, map[string]string{
 		"Sec-Fetch-Dest":     "empty",
 		"Sec-Fetch-Mode":     "cors",
@@ -131,16 +132,16 @@ func (s *Session) UpdateUserHeaders() {
 		"X-Debug-Options":    "bugReporterEnabled",
 		"X-Discord-Locale":   droidSystemLocale,
 		"X-Discord-Timezone": "UTC",
-		superPropsHeader:     mustMarshalJSON(superProps),
+		superPropsHeader:     encodedSuperProps,
 	})
 	s.downloadHeaders = basedOn(s.fetchHeaders, map[string]string{
 		"Sec-Fetch-Mode": "no-cors",
-		superPropsHeader: mustMarshalJSON(superProps),
+		superPropsHeader: encodedSuperProps,
 	})
 	s.imageHeaders = basedOn(s.downloadHeaders, map[string]string{
 		"Accept":         "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
 		"Sec-Fetch-Dest": "image",
-		superPropsHeader: mustMarshalJSON(superProps),
+		superPropsHeader: encodedSuperProps,
 	})
 
 	identifyProps := UserIdentifyProperties{
