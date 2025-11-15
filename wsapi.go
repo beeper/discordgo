@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -202,6 +203,22 @@ func (s *Session) Open() error {
 	if err != nil {
 		return err
 	}
+	if s.IsUser && e.Type == "READY" {
+		s.wsMutex.Lock()
+		err := s.wsConn.WriteJSON(
+			updateTimeSpentSessionOp{
+				Op: 41,
+				Data: updateTimeSpentSessionData{
+					InitializationTimestamp: s.HeartbeatSession.LastUsedTimestamp.UnixMilli(),
+					SessionID:               s.HeartbeatSession.ID,
+					ClientLaunchID:          s.launchID,
+				},
+			})
+		s.wsMutex.Unlock()
+		if err != nil {
+			s.log(LogError, "Failed to send UPDATE_TIME_SPENT_SESSION_ID, continuing: %v", err)
+		}
+	}
 	if e.Type != `READY` && e.Type != `RESUMED` {
 		// This is not fatal, but it does not follow their API documentation.
 		s.log(LogWarning, "Expected READY/RESUMED, instead got:\n%#v\n", e)
@@ -321,6 +338,17 @@ type qosHeartbeatData struct {
 type qosHeartbeatOp struct {
 	Op   int              `json:"op"`
 	Data qosHeartbeatData `json:"d"`
+}
+
+type updateTimeSpentSessionData struct {
+	InitializationTimestamp int64     `json:"initialization_timestamp"`
+	SessionID               uuid.UUID `json:"session_id"`
+	ClientLaunchID          uuid.UUID `json:"client_launch_id"`
+}
+
+type updateTimeSpentSessionOp struct {
+	Op   int                        `json:"op"`
+	Data updateTimeSpentSessionData `json:"d"`
 }
 
 type helloOp struct {
