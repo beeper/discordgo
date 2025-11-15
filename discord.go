@@ -93,7 +93,7 @@ func New(token string) (s *Session, err error) {
 
 		s.launchSignature = sig
 		s.launchID = uuid.New()
-		s.heartbeatSessionID = uuid.New()
+		s.HeartbeatSession = NewHeartbeatSession()
 		s.UpdateUserHeaders()
 
 		s.IsUser = true

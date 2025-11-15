@@ -120,7 +120,7 @@ func (s *Session) UpdateUserHeaders() {
 
 	superProps := SuperProperties{
 		BaseProperties:           baseProps,
-		ClientHeartbeatSessionID: s.heartbeatSessionID,
+		ClientHeartbeatSessionID: s.HeartbeatSession.ID,
 	}
 
 	superPropsHeader := "X-Super-Properties"
