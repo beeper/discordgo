@@ -499,6 +499,16 @@ type Channel struct {
 	DefaultForumLayout ForumLayout `json:"default_forum_layout"`
 
 	MemberIDsPreview []string `json:"member_ids_preview"`
+
+	// Whether or not this private channel is currently message request.
+	//
+	// This can become false (likely upon the user "accepting" the message
+	// request.)
+	IsMessageRequest bool `json:"is_message_request"`
+
+	// Conjecture: when the private channel was determined to be a message request.
+	// This can postdate when the first message was sent.
+	IsMessageRequestTimestamp *time.Time `json:"is_message_request_timestamp"`
 }
 
 // Mention returns a string which mentions the channel
