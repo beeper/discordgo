@@ -810,6 +810,18 @@ const (
 	MfaLevelElevated MfaLevel = 1
 )
 
+// NotificationLevel denotes when to dispatch notifications for messages.
+type NotificationLevel int
+
+const (
+	NotificationLevelAllMessages  NotificationLevel = 0
+	NotificationLevelOnlyMentions NotificationLevel = 1
+	// Only well-defined in UserGuildSettings.
+	NotificationLevelNoMessages NotificationLevel = 2
+	// Only well-defined in UserGuildSettings.
+	NotificationLevelInherit NotificationLevel = 3
+)
+
 // PremiumTier type definition
 type PremiumTier int
 
@@ -2255,11 +2267,22 @@ const (
 	AuditLogActionHomeSettingsUpdate = 191
 )
 
+type MuteConfig struct {
+	// When the mute will expire.
+	EndTime *time.Time `json:"end_time"`
+	// The duration of the mute, in seconds. If this is -1, then the mute lasts
+	// forever.
+	SelectedTimeWindow *int `json:"selected_time_window"`
+}
+
 // A UserGuildSettingsChannelOverride stores data for a channel override for a users guild settings.
 type UserGuildSettingsChannelOverride struct {
-	Muted                bool   `json:"muted"`
-	MessageNotifications int    `json:"message_notifications"`
-	ChannelID            string `json:"channel_id"`
+	ChannelID string `json:"channel_id"`
+	// Whether a guild category channel is collapsed.
+	Collapsed            bool              `json:"collapsed"`
+	MessageNotifications NotificationLevel `json:"message_notifications"`
+	MuteConfig           *MuteConfig       `json:"mute_config"`
+	Muted                bool              `json:"muted"`
 }
 
 type UserGuildSettingsList struct {
@@ -2270,23 +2293,56 @@ type UserGuildSettingsList struct {
 
 // A UserGuildSettings stores data for a users guild settings.
 type UserGuildSettings struct {
-	SuppressEveryone     bool                                `json:"suppress_everyone"`
-	Muted                bool                                `json:"muted"`
-	MobilePush           bool                                `json:"mobile_push"`
-	MessageNotifications int                                 `json:"message_notifications"`
-	ChannelOverrides     []*UserGuildSettingsChannelOverride `json:"channel_overrides"`
+	ChannelOverrides []*UserGuildSettingsChannelOverride `json:"channel_overrides"`
+
+	// TODO: flags
+
 	// This is an empty string when the guild settings actually apply to the
 	// user's private channels (DMs).
-	GuildID string `json:"guild_id"`
+	GuildID              string            `json:"guild_id"`
+	HideMutedChannels    bool              `json:"hide_muted_channels"`
+	MessageNotifications NotificationLevel `json:"message_notifications"`
+	MobilePush           bool              `json:"mobile_push"`
+	MuteConfig           *MuteConfig       `json:"mute_config"`
+	MuteScheduledEvents  bool              `json:"mute_scheduled_events"`
+	Muted                bool              `json:"muted"`
+
+	// TODO: notify_highlights
+
+	SuppressEveryone bool `json:"suppress_everyone"`
+	SuppressRoles    bool `json:"suppress_roles"`
+	Version          int  `json:"version"`
 }
 
-// A UserGuildSettingsEdit stores data for editing UserGuildSettings
+// A UserGuildSettingsChannelOverrideEdit stores partial data for editing ChannelOverrides.
+type UserGuildSettingsChannelOverrideEdit struct {
+	// Whether a guild category channel is collapsed.
+	Collapsed            *bool              `json:"collapsed,omitempty"`
+	MessageNotifications *NotificationLevel `json:"message_notifications,omitempty"`
+	MuteConfig           *MuteConfig        `json:"mute_config,omitempty"`
+	Muted                *bool              `json:"muted,omitempty"`
+}
+
+// A UserGuildSettingsEdit stores partial data for editing UserGuildSettings.
+//
+// Pointers and omitempty are used because sending "muted: null" in JSON
+// unmutes; the field must be omitted entirely.
 type UserGuildSettingsEdit struct {
-	SuppressEveryone     bool                                         `json:"suppress_everyone"`
-	Muted                bool                                         `json:"muted"`
-	MobilePush           bool                                         `json:"mobile_push"`
-	MessageNotifications int                                          `json:"message_notifications"`
-	ChannelOverrides     map[string]*UserGuildSettingsChannelOverride `json:"channel_overrides"`
+	ChannelOverrides map[string]*UserGuildSettingsChannelOverrideEdit `json:"channel_overrides,omitempty"`
+
+	// TODO: flags
+
+	HideMutedChannels    *bool              `json:"hide_muted_channels,omitempty"`
+	MessageNotifications *NotificationLevel `json:"message_notifications,omitempty"`
+	MobilePush           *bool              `json:"mobile_push,omitempty"`
+	MuteConfig           *MuteConfig        `json:"mute_config,omitempty"`
+	MuteScheduledEvents  *bool              `json:"mute_scheduled_events,omitempty"`
+	Muted                *bool              `json:"muted,omitempty"`
+
+	// TODO: notify_highlights
+
+	SuppressEveryone *bool `json:"suppress_everyone,omitempty"`
+	SuppressRoles    *bool `json:"suppress_roles,omitempty"`
 }
 
 // GuildMemberParams stores data needed to update a member
