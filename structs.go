@@ -2274,8 +2274,10 @@ type UserGuildSettings struct {
 	Muted                bool                                `json:"muted"`
 	MobilePush           bool                                `json:"mobile_push"`
 	MessageNotifications int                                 `json:"message_notifications"`
-	GuildID              string                              `json:"guild_id"`
 	ChannelOverrides     []*UserGuildSettingsChannelOverride `json:"channel_overrides"`
+	// This is an empty string when the guild settings actually apply to the
+	// user's private channels (DMs).
+	GuildID string `json:"guild_id"`
 }
 
 // A UserGuildSettingsEdit stores data for editing UserGuildSettings
