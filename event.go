@@ -193,7 +193,9 @@ func (s *Session) handleEvent(t string, i interface{}) {
 	// All events are dispatched internally first.
 	s.onInterface(i)
 
-	s.EventHandler(i)
+	if s.EventHandler != nil {
+		s.EventHandler(i)
+	}
 
 	// Then they are dispatched to anyone handling interface{} events.
 	//s.handle(interfaceEventType, i)
