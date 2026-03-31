@@ -155,6 +155,10 @@ type Session struct {
 	downloadHeaders  map[string]string
 	imageHeaders     map[string]string
 
+	// synchronous hook to inspect HTTP responses from requests to Discord's
+	// REST API
+	RESTResponseHook func(req *http.Request, resp *http.Response, body []byte)
+
 	Logger func(msgL, caller int, format string, a ...interface{})
 }
 

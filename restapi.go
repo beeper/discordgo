@@ -307,6 +307,9 @@ func (s *Session) RequestWithLockedBucket(method, urlStr, contentType string, b 
 	}
 
 	response, err = ioutil.ReadAll(resp.Body)
+	if s.RESTResponseHook != nil {
+		s.RESTResponseHook(req, resp, response)
+	}
 	if err != nil {
 		return
 	}
