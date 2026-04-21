@@ -76,6 +76,22 @@ func MultipartBodyWithJSON(data interface{}, files []*File) (requestContentType 
 	return bodywriter.FormDataContentType(), body.Bytes(), nil
 }
 
+func withSize(URL, size string) string {
+	// FIXME This is gross. Ideally the endpoint functions themselves should be
+	// changed.
+
+	if size == "" {
+		return URL
+	}
+
+	sep := "?"
+	if strings.Contains(URL, "?") {
+		// The URL already has query parameters.
+		sep = "&"
+	}
+	return URL + sep + "size=" + size
+}
+
 func avatarURL(avatarHash, defaultAvatarURL, staticAvatarURL, animatedAvatarURL, size string) string {
 	var URL string
 	if avatarHash == "" {
@@ -86,10 +102,7 @@ func avatarURL(avatarHash, defaultAvatarURL, staticAvatarURL, animatedAvatarURL,
 		URL = staticAvatarURL
 	}
 
-	if size != "" {
-		return URL + "?size=" + size
-	}
-	return URL
+	return withSize(URL, size)
 }
 
 func bannerURL(bannerHash, staticBannerURL, animatedBannerURL, size string) string {
@@ -102,10 +115,7 @@ func bannerURL(bannerHash, staticBannerURL, animatedBannerURL, size string) stri
 		URL = staticBannerURL
 	}
 
-	if size != "" {
-		return URL + "?size=" + size
-	}
-	return URL
+	return withSize(URL, size)
 }
 
 func iconURL(iconHash, staticIconURL, animatedIconURL, size string) string {
@@ -118,8 +128,5 @@ func iconURL(iconHash, staticIconURL, animatedIconURL, size string) string {
 		URL = staticIconURL
 	}
 
-	if size != "" {
-		return URL + "?size=" + size
-	}
-	return URL
+	return withSize(URL, size)
 }

@@ -16,6 +16,11 @@ import "strconv"
 // APIVersion is the Discord API version used for the REST and Websocket API.
 var APIVersion = "9"
 
+// Animated assets are ideally delivered as WebP with ?animated=true. For media
+// natively uploaded as WebP/AVIF, attempting to access them as GIFs will
+// return HTTP 415.
+const animatedSuffix = ".webp?animated=true"
+
 // Known Discord API Endpoints.
 var (
 	EndpointStatus     = "https://status.discord.com/api/v2/"
@@ -51,7 +56,7 @@ var (
 
 	EndpointUser               = func(uID string) string { return EndpointUsers + uID }
 	EndpointUserAvatar         = func(uID, aID string) string { return EndpointCDNAvatars + uID + "/" + aID + ".png" }
-	EndpointUserAvatarAnimated = func(uID, aID string) string { return EndpointCDNAvatars + uID + "/" + aID + ".gif" }
+	EndpointUserAvatarAnimated = func(uID, aID string) string { return EndpointCDNAvatars + uID + "/" + aID + animatedSuffix }
 	EndpointDefaultUserAvatar  = func(idx int) string {
 		return EndpointCDN + "embed/avatars/" + strconv.Itoa(idx) + ".png"
 	}
@@ -59,7 +64,7 @@ var (
 		return EndpointCDNBanners + uID + "/" + cID + ".png"
 	}
 	EndpointUserBannerAnimated = func(uID, cID string) string {
-		return EndpointCDNBanners + uID + "/" + cID + ".gif"
+		return EndpointCDNBanners + uID + "/" + cID + animatedSuffix
 	}
 
 	EndpointUserGuilds                    = func(uID string) string { return EndpointUsers + uID + "/guilds" }
@@ -92,14 +97,14 @@ var (
 	EndpointGuildEmbed               = EndpointGuildWidget
 	EndpointGuildPrune               = func(gID string) string { return EndpointGuilds + gID + "/prune" }
 	EndpointGuildIcon                = func(gID, hash string) string { return EndpointCDNIcons + gID + "/" + hash + ".png" }
-	EndpointGuildIconAnimated        = func(gID, hash string) string { return EndpointCDNIcons + gID + "/" + hash + ".gif" }
+	EndpointGuildIconAnimated        = func(gID, hash string) string { return EndpointCDNIcons + gID + "/" + hash + animatedSuffix }
 	EndpointGuildSplash              = func(gID, hash string) string { return EndpointCDNSplashes + gID + "/" + hash + ".png" }
 	EndpointGuildWebhooks            = func(gID string) string { return EndpointGuilds + gID + "/webhooks" }
 	EndpointGuildAuditLogs           = func(gID string) string { return EndpointGuilds + gID + "/audit-logs" }
 	EndpointGuildEmojis              = func(gID string) string { return EndpointGuilds + gID + "/emojis" }
 	EndpointGuildEmoji               = func(gID, eID string) string { return EndpointGuilds + gID + "/emojis/" + eID }
 	EndpointGuildBanner              = func(gID, hash string) string { return EndpointCDNBanners + gID + "/" + hash + ".png" }
-	EndpointGuildBannerAnimated      = func(gID, hash string) string { return EndpointCDNBanners + gID + "/" + hash + ".gif" }
+	EndpointGuildBannerAnimated      = func(gID, hash string) string { return EndpointCDNBanners + gID + "/" + hash + animatedSuffix }
 	EndpointGuildStickers            = func(gID string) string { return EndpointGuilds + gID + "/stickers" }
 	EndpointGuildSticker             = func(gID, sID string) string { return EndpointGuilds + gID + "/stickers/" + sID }
 	EndpointStageInstance            = func(cID string) string { return EndpointStageInstances + "/" + cID }
@@ -114,13 +119,13 @@ var (
 		return EndpointCDNGuilds + gId + "/users/" + uID + "/avatars/" + aID + ".png"
 	}
 	EndpointGuildMemberAvatarAnimated = func(gId, uID, aID string) string {
-		return EndpointCDNGuilds + gId + "/users/" + uID + "/avatars/" + aID + ".gif"
+		return EndpointCDNGuilds + gId + "/users/" + uID + "/avatars/" + aID + animatedSuffix
 	}
 	EndpointGuildMemberBanner = func(gId, uID, hash string) string {
 		return EndpointCDNGuilds + gId + "/users/" + uID + "/banners/" + hash + ".png"
 	}
 	EndpointGuildMemberBannerAnimated = func(gId, uID, hash string) string {
-		return EndpointCDNGuilds + gId + "/users/" + uID + "/banners/" + hash + ".gif"
+		return EndpointCDNGuilds + gId + "/users/" + uID + "/banners/" + hash + animatedSuffix
 	}
 
 	EndpointRoleIcon = func(rID, hash string) string {
@@ -254,7 +259,7 @@ var (
 	EndpointInvite = func(iID string) string { return EndpointAPI + "invites/" + iID }
 
 	EndpointEmoji         = func(eID string) string { return EndpointCDN + "emojis/" + eID + ".png" }
-	EndpointEmojiAnimated = func(eID string) string { return EndpointCDN + "emojis/" + eID + ".gif" }
+	EndpointEmojiAnimated = func(eID string) string { return EndpointCDN + "emojis/" + eID + animatedSuffix }
 
 	EndpointApplications                      = EndpointAPI + "applications"
 	EndpointApplication                       = func(aID string) string { return EndpointApplications + "/" + aID }
