@@ -445,6 +445,8 @@ type Channel struct {
 	// The recipients of the channel. This is only populated in DM channels.
 	Recipients []*User `json:"recipients"`
 
+	// Undocumented. Like Recipients, but just the user IDs. Seemingly not
+	// populated consistently; avoid.
 	RecipientIDs []string `json:"recipient_ids"`
 
 	// The messages in the channel. This is only present in state-cached channels,
