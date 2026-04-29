@@ -12,6 +12,7 @@ package discordgo
 
 import (
 	"compress/zlib"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,8 +21,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/coder/websocket"
+	"github.com/coder/websocket/wsjson"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 )
 
 // ErrWSAlreadyOpen is thrown when you attempt to open
@@ -100,7 +102,19 @@ func (s *Session) Open() error {
 		header.Add("accept-encoding", "zlib")
 	}
 
-	s.wsConn, _, err = s.Dialer.Dial(s.gateway, header)
+	dialCtx := context.Background()
+	if s.GatewayDialTimeout > 0 {
+		var cancelDial context.CancelFunc
+		dialCtx, cancelDial = context.WithTimeout(dialCtx, s.GatewayDialTimeout)
+		defer cancelDial()
+	}
+
+	s.wsConn, _, err = websocket.Dial(dialCtx, s.gateway, &websocket.DialOptions{
+		HTTPClient: s.GatewayHTTPClient,
+		HTTPHeader: header,
+		// Discord uses its own app-level compression (e.g. zlib-stream).
+		CompressionMode: websocket.CompressionDisabled,
+	})
 	if err != nil {
 		s.log(LogError, "error connecting to gateway %s, %s", s.gateway, err)
 		if !s.noClearGateway {
@@ -111,24 +125,30 @@ func (s *Session) Open() error {
 		return err
 	}
 
-	s.wsConn.SetCloseHandler(func(code int, text string) error {
-		return nil
-	})
+	// coder/websocket defaults to a 32 KiB read limit, which is far too small
+	// for Discord's READY messages, which can be massive... disable the limit
+	// entirely.
+	s.wsConn.SetReadLimit(-1)
+
+	s.wsConnCtx, s.wsConnCancel = context.WithCancel(context.Background())
 
 	defer func() {
 		// because of this, all code below must set err to the error
 		// when exiting with an error :)  Maybe someone has a better
 		// way :)
 		if err != nil {
-			s.wsConn.Close()
+			s.wsConnCancel()
+			s.wsConn.CloseNow()
 			s.wsConn = nil
+			s.wsConnCtx = nil
+			s.wsConnCancel = nil
 			s.closeZLib()
 		}
 	}()
 
 	// The first response from Discord should be an Op 10 (Hello) Packet.
 	// When processed by onEvent the heartbeat goroutine will be started.
-	mt, m, err := s.wsConn.ReadMessage()
+	mt, m, err := s.wsConn.Read(s.wsConnCtx)
 	if err != nil {
 		return err
 	}
@@ -171,7 +191,7 @@ func (s *Session) Open() error {
 
 		s.log(LogInformational, "sending resume packet to gateway")
 		s.wsMutex.Lock()
-		err = s.wsConn.WriteJSON(p)
+		err = wsjson.Write(s.wsConnCtx, s.wsConn, p)
 		s.wsMutex.Unlock()
 		if err != nil {
 			err = fmt.Errorf("error sending gateway resume packet, %s, %s", s.gateway, err)
@@ -195,7 +215,7 @@ func (s *Session) Open() error {
 	}
 
 	// Now Discord should send us a READY or RESUMED packet.
-	mt, m, err = s.wsConn.ReadMessage()
+	mt, m, err = s.wsConn.Read(s.wsConnCtx)
 	if err != nil {
 		return err
 	}
@@ -205,7 +225,7 @@ func (s *Session) Open() error {
 	}
 	if s.IsUser && e.Type == "READY" {
 		s.wsMutex.Lock()
-		err := s.wsConn.WriteJSON(
+		err := wsjson.Write(s.wsConnCtx, s.wsConn,
 			updateTimeSpentSessionOp{
 				Op: 41,
 				Data: updateTimeSpentSessionData{
@@ -240,9 +260,10 @@ func (s *Session) Open() error {
 	// go rountines.
 	s.listening = make(chan interface{})
 
-	// Start sending heartbeats and reading messages from Discord.
-	go s.heartbeat(s.wsConn, s.listening, h.HeartbeatInterval)
-	go s.listen(s.wsConn, s.listening)
+	// Start sending heartbeats and reading messages from Discord. Capture a
+	// fresh context for each goroutine.
+	go s.heartbeat(s.wsConnCtx, s.wsConn, s.listening, h.HeartbeatInterval)
+	go s.listen(s.wsConnCtx, s.wsConn, s.listening)
 
 	s.log(LogInformational, "exiting")
 	return nil
@@ -250,13 +271,13 @@ func (s *Session) Open() error {
 
 // listen polls the websocket connection for events, it will stop when the
 // listening channel is closed, or an error occurs.
-func (s *Session) listen(wsConn *websocket.Conn, listening <-chan interface{}) {
+func (s *Session) listen(ctx context.Context, wsConn *websocket.Conn, listening <-chan interface{}) {
 
 	s.log(LogInformational, "called")
 
 	for {
 
-		messageType, message, err := wsConn.ReadMessage()
+		messageType, message, err := wsConn.Read(ctx)
 
 		if err != nil {
 
@@ -271,10 +292,8 @@ func (s *Session) listen(wsConn *websocket.Conn, listening <-chan interface{}) {
 
 				s.log(LogWarning, "error reading from gateway %s websocket, %s", s.gateway, err)
 
-				wsCloseErr := &websocket.CloseError{}
-				if !errors.As(err, &wsCloseErr) {
-					wsCloseErr = nil
-				}
+				closeCode := websocket.CloseStatus(err)
+
 				// There has been an error reading, close the websocket so that
 				// OnDisconnect event is emitted.
 				err := s.Close()
@@ -282,13 +301,11 @@ func (s *Session) listen(wsConn *websocket.Conn, listening <-chan interface{}) {
 					s.log(LogWarning, "error closing session connection, %s", err)
 				}
 
-				if wsCloseErr != nil {
-					switch wsCloseErr.Code {
-					case 4004:
-						s.log(LogInformational, "emit invalid auth event")
-						s.handleEvent(invalidAuthEventType, &InvalidAuth{})
-						return
-					}
+				switch closeCode {
+				case 4004:
+					s.log(LogInformational, "emit invalid auth event")
+					s.handleEvent(invalidAuthEventType, &InvalidAuth{})
+					return
 				}
 
 				s.log(LogInformational, "calling reconnect() now")
@@ -368,7 +385,7 @@ func (s *Session) HeartbeatLatency() time.Duration {
 // heartbeat sends regular heartbeats to Discord so it knows the client
 // is still connected.  If you do not send these heartbeats Discord will
 // disconnect the websocket connection after a few seconds.
-func (s *Session) heartbeat(wsConn *websocket.Conn, listening <-chan interface{}, heartbeatIntervalMsec time.Duration) {
+func (s *Session) heartbeat(ctx context.Context, wsConn *websocket.Conn, listening <-chan interface{}, heartbeatIntervalMsec time.Duration) {
 
 	s.log(LogInformational, "called")
 
@@ -388,7 +405,7 @@ func (s *Session) heartbeat(wsConn *websocket.Conn, listening <-chan interface{}
 		s.log(LogDebug, "sending gateway websocket heartbeat seq %d", sequence)
 		s.wsMutex.Lock()
 		s.LastHeartbeatSent = time.Now().UTC()
-		err = wsConn.WriteJSON(newForegroundedQosHeartbeatOp(sequence))
+		err = wsjson.Write(ctx, wsConn, newForegroundedQosHeartbeatOp(sequence))
 		s.wsMutex.Unlock()
 		if err != nil || time.Now().UTC().Sub(last) > (heartbeatIntervalMsec*FailedHeartbeatAcks) {
 			if err != nil {
@@ -523,7 +540,7 @@ func (s *Session) UpdateStatusComplex(usd UpdateStatusData) (err error) {
 	}
 
 	s.wsMutex.Lock()
-	err = s.wsConn.WriteJSON(updateStatusOp{3, usd})
+	err = wsjson.Write(s.wsConnCtx, s.wsConn, updateStatusOp{3, usd})
 	s.wsMutex.Unlock()
 
 	return
@@ -641,7 +658,7 @@ func (s *Session) GatewayWriteStruct(data interface{}) (err error) {
 	}
 
 	s.wsMutex.Lock()
-	err = s.wsConn.WriteJSON(data)
+	err = wsjson.Write(s.wsConnCtx, s.wsConn, data)
 	s.wsMutex.Unlock()
 
 	return err
@@ -657,7 +674,7 @@ func (s *Session) requestGuildMembers(data requestGuildMembersData) (err error) 
 	}
 
 	s.wsMutex.Lock()
-	err = s.wsConn.WriteJSON(requestGuildMembersOp{8, data})
+	err = wsjson.Write(s.wsConnCtx, s.wsConn, requestGuildMembersOp{8, data})
 	s.wsMutex.Unlock()
 
 	return
@@ -677,7 +694,7 @@ func (s *Session) MarkViewing(channelID string) (err error) {
 	}
 
 	s.wsMutex.Lock()
-	err = s.wsConn.WriteJSON(markViewingOp{13, markViewingData{channelID}})
+	err = wsjson.Write(s.wsConnCtx, s.wsConn, markViewingOp{13, markViewingData{channelID}})
 	s.wsMutex.Unlock()
 
 	return
@@ -697,7 +714,7 @@ func (s *Session) SubscribeGuild(dat GuildSubscribeData) (err error) {
 	}
 
 	s.wsMutex.Lock()
-	err = s.wsConn.WriteJSON(guildSubscribeOp{14, dat})
+	err = wsjson.Write(s.wsConnCtx, s.wsConn, guildSubscribeOp{14, dat})
 	s.wsMutex.Unlock()
 
 	return
@@ -711,14 +728,14 @@ func (s *Session) SubscribeGuild(dat GuildSubscribeData) (err error) {
 //
 // If you use the AddHandler() function to register a handler for the
 // "OnEvent" event then all events will be passed to that handler.
-func (s *Session) onEvent(messageType int, message []byte, isOnConnect bool) (*Event, error) {
+func (s *Session) onEvent(messageType websocket.MessageType, message []byte, isOnConnect bool) (*Event, error) {
 	var err error
 
 	// Decode the event into an Event struct.
 	var e *Event
 
 	// If this is a compressed message, uncompress it.
-	if messageType == websocket.BinaryMessage {
+	if messageType == websocket.MessageBinary {
 		go func() {
 			_, innerErr := s.zlibPipeWriter.Write(message)
 			if innerErr != nil {
@@ -754,7 +771,7 @@ func (s *Session) onEvent(messageType int, message []byte, isOnConnect bool) (*E
 	if e.Operation == 1 {
 		s.log(LogInformational, "sending heartbeat in response to Op1")
 		s.wsMutex.Lock()
-		err = s.wsConn.WriteJSON(newForegroundedQosHeartbeatOp(atomic.LoadInt64(s.sequence)))
+		err = wsjson.Write(s.wsConnCtx, s.wsConn, newForegroundedQosHeartbeatOp(atomic.LoadInt64(s.sequence)))
 		s.wsMutex.Unlock()
 		if err != nil {
 			s.log(LogError, "error sending heartbeat in response to Op1")
@@ -772,7 +789,7 @@ func (s *Session) onEvent(messageType int, message []byte, isOnConnect bool) (*E
 			return e, ErrImmediateDisconnect
 		} else {
 			s.log(LogInformational, "Closing and reconnecting in response to Op7")
-			s.CloseWithCode(websocket.CloseServiceRestart)
+			s.CloseWithCode(websocket.StatusServiceRestart)
 			s.reconnect()
 			return e, nil
 		}
@@ -927,7 +944,7 @@ func (s *Session) ChannelVoiceJoinManual(gID, cID string, mute, deaf bool) (err 
 	// Send the request to Discord that we want to join the voice channel
 	data := voiceChannelJoinOp{4, voiceChannelJoinData{&gID, channelID, mute, deaf}}
 	s.wsMutex.Lock()
-	err = s.wsConn.WriteJSON(data)
+	err = wsjson.Write(s.wsConnCtx, s.wsConn, data)
 	s.wsMutex.Unlock()
 	return
 }
@@ -1035,7 +1052,7 @@ func (s *Session) identify() error {
 	dat, _ := json.Marshal(s.Identify)
 	s.log(LogDebug, "Identify Packet: %s", dat)
 	s.wsMutex.Lock()
-	err := s.wsConn.WriteJSON(op)
+	err := wsjson.Write(s.wsConnCtx, s.wsConn, op)
 	s.wsMutex.Unlock()
 
 	return err
@@ -1104,13 +1121,13 @@ func (s *Session) reconnect() {
 // Close closes a websocket and stops all listening/heartbeat goroutines.
 // TODO: Add support for Voice WS/UDP
 func (s *Session) Close() error {
-	return s.CloseWithCode(websocket.CloseNormalClosure)
+	return s.CloseWithCode(websocket.StatusNormalClosure)
 }
 
 // CloseWithCode closes a websocket using the provided closeCode and stops all
 // listening/heartbeat goroutines.
 // TODO: Add support for Voice WS/UDP connections
-func (s *Session) CloseWithCode(closeCode int) (err error) {
+func (s *Session) CloseWithCode(closeCode websocket.StatusCode) (err error) {
 
 	s.log(LogInformational, "called")
 	s.Lock()
@@ -1128,26 +1145,24 @@ func (s *Session) CloseWithCode(closeCode int) (err error) {
 
 	if s.wsConn != nil {
 
-		s.log(LogInformational, "sending close frame")
-		// To cleanly close a connection, a client should send a close
-		// frame and wait for the server to close the connection.
+		s.log(LogInformational, "closing gateway websocket")
 		s.wsMutex.Lock()
-		err := s.wsConn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(closeCode, ""))
+		// Close _before_ canceling the wsConnCtx, as cancelling triggers an
+		// asynchronous teardown of the underlying connection, which would race
+		// with our intentional Close.
+		err := s.wsConn.Close(closeCode, "")
 		s.wsMutex.Unlock()
 		if err != nil {
 			s.log(LogInformational, "error closing websocket, %s", err)
 		}
 
-		// TODO: Wait for Discord to actually close the connection.
-		time.Sleep(1 * time.Second)
-
-		s.log(LogInformational, "closing gateway websocket")
-		err = s.wsConn.Close()
-		if err != nil {
-			s.log(LogInformational, "error closing websocket, %s", err)
+		if s.wsConnCancel != nil {
+			s.wsConnCancel()
 		}
 
 		s.wsConn = nil
+		s.wsConnCtx = nil
+		s.wsConnCancel = nil
 		s.closeZLib()
 	}
 

@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 )
 
 // VERSION of DiscordGo, follows Semantic Versioning. (http://semver.org/)
@@ -48,10 +47,13 @@ func New(token string) (s *Session, err error) {
 		ShardCount:                         1,
 		MaxRestRetries:                     3,
 		Client:                             &http.Client{Timeout: (20 * time.Second)},
-		Dialer:                             websocket.DefaultDialer,
-		UserAgent:                          "DiscordBot (https://github.com/bwmarrin/discordgo, v" + VERSION + ")",
-		sequence:                           new(int64),
-		LastHeartbeatAck:                   time.Now().UTC(),
+		// GatewayHTTPClient is only used to shake hands with the Discord
+		// Gateway.
+		GatewayHTTPClient:  http.DefaultClient,
+		GatewayDialTimeout: 45 * time.Second,
+		UserAgent:          "DiscordBot (https://github.com/bwmarrin/discordgo, v" + VERSION + ")",
+		sequence:           new(int64),
+		LastHeartbeatAck:   time.Now().UTC(),
 	}
 
 	// Initialize the Identify Package with defaults

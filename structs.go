@@ -12,6 +12,7 @@
 package discordgo
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,8 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 )
 
 // A Session represents a connection to the Discord API.
@@ -100,8 +101,11 @@ type Session struct {
 	// The http client used for REST requests
 	Client *http.Client
 
-	// The dialer used for WebSocket connection
-	Dialer *websocket.Dialer
+	// GatewayHTTPClient is the [http.Client] used to perform the gateway
+	// WebSocket handshake. This MUST be an HTTP/1.1 client, as the hijack
+	// coder/websocket performs will NOT work over HTTP/2.
+	GatewayHTTPClient  *http.Client
+	GatewayDialTimeout time.Duration
 
 	// The user agent used for REST APIs
 	UserAgent string
@@ -124,6 +128,11 @@ type Session struct {
 
 	// The websocket connection.
 	wsConn *websocket.Conn
+
+	// wsConnCtx is a long-lived context scoped to the current gateway
+	// connection.
+	wsConnCtx    context.Context
+	wsConnCancel context.CancelFunc
 
 	zlibReader     io.ReadCloser
 	zlibJSON       *json.Decoder
