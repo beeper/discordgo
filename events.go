@@ -61,10 +61,11 @@ type Ready struct {
 }
 
 type ReadySupplemental struct {
-	MergedMembers [][]*Member     `json:"merged_members"`
-	Guilds        []*MinimalGuild `json:"guilds"`
-	Disclose      []string        `json:"disclose"`
-	// Also has lazy_private_channels and merged_presences
+	MergedMembers       [][]*Member     `json:"merged_members"`
+	Guilds              []*MinimalGuild `json:"guilds"`
+	Disclose            []string        `json:"disclose"`
+	LazyPrivateChannels []*Channel      `json:"lazy_private_channels"`
+	// Also has merged_presences
 }
 
 // ChannelCreate is the data for a ChannelCreate event.
