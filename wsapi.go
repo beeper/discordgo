@@ -1052,6 +1052,10 @@ func (s *Session) reconnect() {
 		wait := time.Duration(1)
 
 		for {
+			if s.BeforeReconnect != nil {
+				s.BeforeReconnect(s)
+			}
+
 			s.log(LogInformational, "trying to reconnect to gateway")
 
 			err = s.Open()

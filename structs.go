@@ -159,6 +159,10 @@ type Session struct {
 	// REST API
 	RESTResponseHook func(req *http.Request, resp *http.Response, body []byte)
 
+	// BeforeReconnect, if set, is called during each internal reconnect
+	// iteration before attempting to connect to the gateway.
+	BeforeReconnect func(s *Session)
+
 	Logger func(msgL, caller int, format string, a ...interface{})
 }
 
