@@ -910,6 +910,16 @@ func (s *State) Message(channelID, messageID string) (*Message, error) {
 	return nil, ErrStateNotFound
 }
 
+func (s *State) unlockedClearMaps() {
+	if s == nil {
+		return
+	}
+
+	clear(s.guildMap)
+	clear(s.channelMap)
+	clear(s.memberMap)
+}
+
 // OnReady takes a Ready event and updates all internal state.
 func (s *State) onReady(se *Session, r *Ready) (err error) {
 	if s == nil {
@@ -930,11 +940,13 @@ func (s *State) onReady(se *Session, r *Ready) (err error) {
 			Application: r.Application,
 		}
 
+		s.unlockedClearMaps()
 		s.Ready = ready
 
 		return nil
 	}
 
+	s.unlockedClearMaps()
 	s.Ready = *r
 
 	findUser := func(userID string) *User {
@@ -965,6 +977,9 @@ func (s *State) onReady(se *Session, r *Ready) (err error) {
 
 		for _, c := range g.Channels {
 			s.channelMap[c.ID] = c
+		}
+		for _, t := range g.Threads {
+			s.channelMap[t.ID] = t
 		}
 	}
 
