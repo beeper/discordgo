@@ -87,6 +87,7 @@ const (
 	typingStartEventType                         = "TYPING_START"
 	userGuildSettingsUpdateEventType             = "USER_GUILD_SETTINGS_UPDATE"
 	userNoteUpdateEventType                      = "USER_NOTE_UPDATE"
+	userRequiredActionUpdateEventType            = "USER_REQUIRED_ACTION_UPDATE"
 	userSettingsUpdateEventType                  = "USER_SETTINGS_UPDATE"
 	userUpdateEventType                          = "USER_UPDATE"
 	voiceServerUpdateEventType                   = "VOICE_SERVER_UPDATE"
@@ -1669,6 +1670,26 @@ func (eh userNoteUpdateEventHandler) Handle(s *Session, i interface{}) {
 	}
 }
 
+// userRequiredActionUpdateEventHandler is an event handler for UserRequiredActionUpdate events.
+type userRequiredActionUpdateEventHandler func(*Session, *UserRequiredActionUpdate)
+
+// Type returns the event type for UserRequiredActionUpdate events.
+func (eh userRequiredActionUpdateEventHandler) Type() string {
+	return userRequiredActionUpdateEventType
+}
+
+// New returns a new instance of UserRequiredActionUpdate.
+func (eh userRequiredActionUpdateEventHandler) New() interface{} {
+	return &UserRequiredActionUpdate{}
+}
+
+// Handle is the handler for UserRequiredActionUpdate events.
+func (eh userRequiredActionUpdateEventHandler) Handle(s *Session, i interface{}) {
+	if t, ok := i.(*UserRequiredActionUpdate); ok {
+		eh(s, t)
+	}
+}
+
 // userSettingsUpdateEventHandler is an event handler for UserSettingsUpdate events.
 type userSettingsUpdateEventHandler func(*Session, *UserSettingsUpdate)
 
@@ -1933,6 +1954,8 @@ func handlerForInterface(handler interface{}) EventHandler {
 		return userGuildSettingsUpdateEventHandler(v)
 	case func(*Session, *UserNoteUpdate):
 		return userNoteUpdateEventHandler(v)
+	case func(*Session, *UserRequiredActionUpdate):
+		return userRequiredActionUpdateEventHandler(v)
 	case func(*Session, *UserSettingsUpdate):
 		return userSettingsUpdateEventHandler(v)
 	case func(*Session, *UserUpdate):
@@ -2024,6 +2047,7 @@ func init() {
 	registerInterfaceProvider(typingStartEventHandler(nil))
 	registerInterfaceProvider(userGuildSettingsUpdateEventHandler(nil))
 	registerInterfaceProvider(userNoteUpdateEventHandler(nil))
+	registerInterfaceProvider(userRequiredActionUpdateEventHandler(nil))
 	registerInterfaceProvider(userSettingsUpdateEventHandler(nil))
 	registerInterfaceProvider(userUpdateEventHandler(nil))
 	registerInterfaceProvider(voiceServerUpdateEventHandler(nil))

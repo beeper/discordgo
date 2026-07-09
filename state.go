@@ -1218,7 +1218,10 @@ func (s *State) OnInterface(se *Session, i interface{}) (err error) {
 
 			err = s.MemberAdd(m)
 		}
-
+	case *UserRequiredActionUpdate:
+		s.Lock()
+		s.RequiredAction = t.RequiredAction
+		s.Unlock()
 	}
 
 	return

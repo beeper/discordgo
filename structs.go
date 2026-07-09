@@ -3343,3 +3343,21 @@ const (
 func MakeIntent(intents Intent) Intent {
 	return intents
 }
+
+// A RequiredAction is applied to a user account when an interactive security
+// or safety flow must be completed before the account may be further used.
+type RequiredAction string
+
+const (
+	RequireAgreements                       RequiredAction = "AGREEMENTS"                                   // "Terms of Service and Policy Updates"
+	RequireCaptcha                          RequiredAction = "REQUIRE_CAPTCHA"                              // legacy
+	RequireVerifiedEmail                    RequiredAction = "REQUIRE_VERIFIED_EMAIL"                       // add a verified email
+	RequireVerifiedPhone                    RequiredAction = "REQUIRE_VERIFIED_PHONE"                       // add a verified phone number
+	RequireReverifiedEmail                  RequiredAction = "REQUIRE_REVERIFIED_EMAIL"                     // reaffirm ownership of existing email
+	RequireReverifiedPhone                  RequiredAction = "REQUIRE_REVERIFIED_PHONE"                     // reaffirm ownership of existing phone number
+	RequireVerifiedEmailOrVerifiedPhone     RequiredAction = "REQUIRE_VERIFIED_EMAIL_OR_VERIFIED_PHONE"     // add a verified phone number or email
+	RequireReverifiedEmailOrVerifiedPhone   RequiredAction = "REQUIRE_REVERIFIED_EMAIL_OR_VERIFIED_PHONE"   // reaffirm ownership of existing email, or add a verified phone number
+	RequireVerifiedEmailOrReverifiedPhone   RequiredAction = "REQUIRE_VERIFIED_EMAIL_OR_REVERIFIED_PHONE"   // add a verified email, or reaffirm ownership of existing phone number
+	RequireReverifiedEmailOrReverifiedPhone RequiredAction = "REQUIRE_REVERIFIED_EMAIL_OR_REVERIFIED_PHONE" // reaffirm ownership of existing email or phone number
+	RequireSafetyFlows                      RequiredAction = "REQUIRE_SAFETY_FLOWS"                         // server-driven safety flow UI
+)

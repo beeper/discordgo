@@ -56,6 +56,7 @@ type Ready struct {
 	Presences         []*Presence            `json:"presences"`
 	Notes             map[string]string      `json:"notes"`
 	MergedMembers     [][]*Member            `json:"merged_members"`
+	RequiredAction    RequiredAction         `json:"required_action"`
 
 	Users []*User `json:"users"`
 }
@@ -558,4 +559,10 @@ type SubscriptionUpdate struct {
 // https://discord.com/developers/docs/monetization/implementing-app-subscriptions#using-subscription-events-for-the-subscription-lifecycle
 type SubscriptionDelete struct {
 	*Subscription
+}
+
+// UserRequiredActionUpdate contains an updated [RequiredAction] for the user
+// account.
+type UserRequiredActionUpdate struct {
+	RequiredAction RequiredAction `json:"required_action"`
 }
