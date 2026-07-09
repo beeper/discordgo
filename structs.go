@@ -3392,14 +3392,16 @@ type SafetyHub struct {
 // Classifications are what collectively determine a user account's
 // [AccountStanding], and are contained in [SafetyHub].
 type Classification struct {
-	ID                  string                         `json:"id"`
-	Description         string                         `json:"description"`
-	GuildMetadata       *ClassificationGuildMetadata   `json:"guild_metadata,omitempty"`
-	IsCOPPA             bool                           `json:"is_coppa"`
-	IsSpam              bool                           `json:"is_spam"`
-	AppealIngestionType *AppealIngestionType           `json:"appeal_ingestion_type,omitempty"` // in-app appeal when nil
-	AppealStatus        *struct{ Status AppealStatus } `json:"appeal_status,omitempty"`
-	MaxExpirationTime   *time.Time                     `json:"max_expiration_time,omitempty"` // permanent when nil
+	ID                  string                       `json:"id"`
+	Description         string                       `json:"description"`
+	GuildMetadata       *ClassificationGuildMetadata `json:"guild_metadata,omitempty"`
+	IsCOPPA             bool                         `json:"is_coppa"`
+	IsSpam              bool                         `json:"is_spam"`
+	AppealIngestionType *AppealIngestionType         `json:"appeal_ingestion_type,omitempty"` // in-app appeal when nil
+	AppealStatus        *struct {
+		Status AppealStatus `json:"status"`
+	} `json:"appeal_status,omitempty"`
+	MaxExpirationTime *time.Time `json:"max_expiration_time,omitempty"` // permanent when nil
 	// (more omitted)
 }
 
