@@ -3361,3 +3361,75 @@ const (
 	RequireReverifiedEmailOrReverifiedPhone RequiredAction = "REQUIRE_REVERIFIED_EMAIL_OR_REVERIFIED_PHONE" // reaffirm ownership of existing email or phone number
 	RequireSafetyFlows                      RequiredAction = "REQUIRE_SAFETY_FLOWS"                         // server-driven safety flow UI
 )
+
+// AccountStanding quantifies a user account's standing with Discord.
+type AccountStanding int
+
+const (
+	StandingAllGood     AccountStanding = 100 // "Your account is all good"
+	StandingLimited     AccountStanding = 200 // "Your account is limited"
+	StandingVeryLimited AccountStanding = 300 // "Your account is very limited"
+	StandingAtRisk      AccountStanding = 400 // "Your account is at risk"
+	StandingSuspended   AccountStanding = 500 // "Your account is suspended"
+)
+
+// SafetyHub reflects a user account's standing on Discord as well as the
+// classifications (policy violations) affecting it.
+type SafetyHub struct {
+	AccountStanding struct {
+		State AccountStanding `json:"state"`
+	} `json:"account_standing"`
+	Classifications      []Classification `json:"classifications"`
+	GuildClassifications []Classification `json:"guild_classifications,omitempty"`
+	IsAppealEligible     bool             `json:"is_appeal_eligible"`
+	IsDSAEligible        bool             `json:"is_dsa_eligible"`
+	// (more omitted)
+}
+
+// A Classification records a violation of Discord policy, attributed either to
+// the user directly or to a [Guild] they own or are a member of.
+//
+// Classifications are what collectively determine a user account's
+// [AccountStanding], and are contained in [SafetyHub].
+type Classification struct {
+	ID                  string                         `json:"id"`
+	Description         string                         `json:"description"`
+	GuildMetadata       *ClassificationGuildMetadata   `json:"guild_metadata,omitempty"`
+	IsCOPPA             bool                           `json:"is_coppa"`
+	IsSpam              bool                           `json:"is_spam"`
+	AppealIngestionType *AppealIngestionType           `json:"appeal_ingestion_type,omitempty"` // in-app appeal when nil
+	AppealStatus        *struct{ Status AppealStatus } `json:"appeal_status,omitempty"`
+	MaxExpirationTime   *time.Time                     `json:"max_expiration_time,omitempty"` // permanent when nil
+	// (more omitted)
+}
+
+type AppealStatus int
+
+const (
+	AppealReviewPending       AppealStatus = 1
+	ClassificationUpheld      AppealStatus = 2 // unused?
+	ClassificationInvalidated AppealStatus = 3 // unused?
+)
+
+type AppealIngestionType int
+
+const (
+	AppealWebForm AppealIngestionType = iota
+	AppealAgeVerify
+	AppealInApp
+)
+
+type ClassificationGuildMetadata struct {
+	// Name is the name of the [Guild] that was classified.
+	Name       string                        `json:"name"`
+	MemberType ClassificationGuildMemberType `json:"member_type"`
+}
+
+// ClassificationGuildMemberType denotes a user account's relationship to a
+// [Guild] that received a [Classification].
+type ClassificationGuildMemberType int
+
+const (
+	ClassificationGuildOwner  ClassificationGuildMemberType = 1
+	ClassificationGuildMember ClassificationGuildMemberType = 2
+)

@@ -288,6 +288,7 @@ var (
 	EndpointUserNotes            = func(uID string) string { return EndpointUsers + "@me/notes/" + uID }
 	EndpointGuildIntegrationSync = func(gID, iID string) string { return EndpointGuilds + gID + "/integrations/" + iID + "/sync" }
 	EndpointChannelMessageAck    = func(cID, mID string) string { return EndpointChannels + cID + "/messages/" + mID + "/ack" }
+	EndpointSafetyHub            = func() string { return EndpointAPI + "safety-hub/@me" }
 
 	EndpointRelationships       = func() string { return EndpointUsers + "@me" + "/relationships" }
 	EndpointRelationship        = func(uID string) string { return EndpointRelationships() + "/" + uID }

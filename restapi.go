@@ -587,6 +587,15 @@ func (s *Session) UserUpdateStatus(status Status) (st *Settings, err error) {
 	return
 }
 
+func (s *Session) SafetyHub(options ...RequestOption) (sh *SafetyHub, err error) {
+	response, err := s.Request("GET", EndpointSafetyHub(), nil, options...)
+	if err != nil {
+		return nil, err
+	}
+	err = unmarshal(response, &sh)
+	return
+}
+
 // UserConnections returns the user's connections
 func (s *Session) UserConnections(options ...RequestOption) (conn []*UserConnection, err error) {
 	response, err := s.RequestWithBucketID("GET", EndpointUserConnections("@me"), nil, EndpointUserConnections("@me"), options...)
