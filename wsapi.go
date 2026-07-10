@@ -343,7 +343,7 @@ func newForegroundedQosHeartbeatOp(seq int64) qosHeartbeatOp {
 			Seq: seq,
 			Qos: qos{
 				Active:  true,
-				Ver:     26,
+				Ver:     28,
 				Reasons: []string{"foregrounded"},
 			},
 		},
