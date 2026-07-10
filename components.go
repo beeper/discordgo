@@ -25,6 +25,8 @@ const (
 	FileComponentType              ComponentType = 13
 	SeparatorComponent             ComponentType = 14
 	ContainerComponent             ComponentType = 17
+	LabelComponent                 ComponentType = 18
+	FileUploadComponent            ComponentType = 19
 )
 
 // MessageComponent is a base interface for all message components.
@@ -71,6 +73,10 @@ func (umc *unmarshalableMessageComponent) UnmarshalJSON(src []byte) error {
 		umc.MessageComponent = &Separator{}
 	case ContainerComponent:
 		umc.MessageComponent = &Container{}
+	case LabelComponent:
+		umc.MessageComponent = &Label{}
+	case FileUploadComponent:
+		umc.MessageComponent = &FileUpload{}
 	default:
 		return fmt.Errorf("unknown component type: %d", v.Type)
 	}
@@ -258,12 +264,16 @@ type SelectMenu struct {
 
 	Options  []SelectMenuOption `json:"options,omitempty"`
 	Disabled bool               `json:"disabled"`
+	Required *bool              `json:"required,omitempty"`
 
 	// NOTE: Can only be used in SelectMenu with Channel menu type.
 	ChannelTypes []ChannelType `json:"channel_types,omitempty"`
 
 	// Unique identifier for the component; auto populated through increment if not provided.
 	ID int `json:"id,omitempty"`
+
+	// List of values that is only populated when receiving an interaction response; do not fill this manually.
+	Values []string `json:"values,omitempty"`
 }
 
 // Type is a method to get the type of a component.
@@ -290,11 +300,11 @@ func (s SelectMenu) MarshalJSON() ([]byte, error) {
 // TextInput represents text input component.
 type TextInput struct {
 	CustomID    string         `json:"custom_id"`
-	Label       string         `json:"label"`
+	Label       string         `json:"label,omitempty"`
 	Style       TextInputStyle `json:"style"`
 	Placeholder string         `json:"placeholder,omitempty"`
 	Value       string         `json:"value,omitempty"`
-	Required    bool           `json:"required"`
+	Required    *bool          `json:"required,omitempty"`
 	MinLength   int            `json:"min_length,omitempty"`
 	MaxLength   int            `json:"max_length,omitempty"`
 
@@ -411,7 +421,7 @@ type Thumbnail struct {
 	ID          int               `json:"id,omitempty"`
 	Media       UnfurledMediaItem `json:"media"`
 	Description *string           `json:"description,omitempty"`
-	Spoiler     bool              `json:"spoiler,omitemoty"`
+	Spoiler     bool              `json:"spoiler,omitempty"`
 }
 
 // Type is a method to get the type of a component.
@@ -575,6 +585,86 @@ func (c Container) MarshalJSON() ([]byte, error) {
 	}{
 		container: container(c),
 		Type:      c.Type(),
+	})
+}
+
+// Label is a top-level layout component.
+// Labels wrap modal components with text as a label and optional description.
+type Label struct {
+	// Unique identifier for the component; auto populated through increment if not provided.
+	ID          int              `json:"id,omitempty"`
+	Label       string           `json:"label"`
+	Description string           `json:"description,omitempty"`
+	Component   MessageComponent `json:"component"`
+}
+
+// Type is a method to get the type of a component.
+func (Label) Type() ComponentType {
+	return LabelComponent
+}
+
+// UnmarshalJSON is a method for unmarshaling Label from JSON
+func (l *Label) UnmarshalJSON(data []byte) error {
+	type label Label
+
+	var v struct {
+		label
+		RawComponent unmarshalableMessageComponent `json:"component"`
+	}
+
+	err := json.Unmarshal(data, &v)
+	if err != nil {
+		return err
+	}
+
+	*l = Label(v.label)
+	l.Component = v.RawComponent.MessageComponent
+
+	return nil
+}
+
+// MarshalJSON is a method for marshaling Label to a JSON object.
+func (l Label) MarshalJSON() ([]byte, error) {
+	type label Label
+
+	return Marshal(struct {
+		label
+		Type ComponentType `json:"type"`
+	}{
+		label: label(l),
+		Type:  l.Type(),
+	})
+}
+
+// FileUpload is an interactive component that allows users to upload files in modals.
+// FileUploads are available on modals. They must be placed inside a Label.
+type FileUpload struct {
+	// Unique identifier for the component; auto populated through increment if not provided.
+	ID        int    `json:"id,omitempty"`
+	CustomID  string `json:"custom_id,omitempty"`
+	MinValues *int   `json:"min_values,omitempty"`
+	MaxValues int    `json:"max_values,omitempty"`
+	Required  *bool  `json:"required,omitempty"`
+
+	// List of values that is only populated when receiving an interaction response; do not fill this manually.
+	Values []string `json:"values,omitempty"`
+}
+
+// Type is a method to get the type of a component.
+func (FileUpload) Type() ComponentType {
+	return FileUploadComponent
+}
+
+// MarshalJSON is a method for marshaling FileUpload to a JSON object.
+func (f FileUpload) MarshalJSON() ([]byte, error) {
+	type fileUpload FileUpload
+
+	return Marshal(struct {
+		fileUpload
+		Type ComponentType `json:"type"`
+	}{
+		fileUpload: fileUpload(f),
+		Type:       f.Type(),
 	})
 }
 

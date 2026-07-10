@@ -1054,6 +1054,12 @@ func (s *State) OnInterface(se *Session, i interface{}) (err error) {
 
 		// Removes member from the cache if tracking is enabled.
 		if s.TrackMembers {
+			old, err := s.Member(t.Member.GuildID, t.Member.User.ID)
+			if err == nil {
+				oldCopy := *old
+				t.BeforeDelete = &oldCopy
+			}
+
 			err = s.MemberRemove(t.Member)
 		}
 	case *GuildMembersChunk:
@@ -1075,10 +1081,22 @@ func (s *State) OnInterface(se *Session, i interface{}) (err error) {
 		}
 	case *GuildRoleUpdate:
 		if s.TrackRoles {
+			old, err := s.Role(t.GuildID, t.Role.ID)
+			if err == nil {
+				oldCopy := *old
+				t.BeforeUpdate = &oldCopy
+			}
+
 			err = s.RoleAdd(t.GuildID, t.Role)
 		}
 	case *GuildRoleDelete:
 		if s.TrackRoles {
+			old, err := s.Role(t.GuildID, t.RoleID)
+			if err == nil {
+				oldCopy := *old
+				t.BeforeDelete = &oldCopy
+			}
+
 			err = s.RoleRemove(t.GuildID, t.RoleID)
 		}
 	case *GuildEmojisUpdate:
@@ -1118,6 +1136,11 @@ func (s *State) OnInterface(se *Session, i interface{}) (err error) {
 		}
 	case *ChannelDelete:
 		if s.TrackChannels {
+			old, err := s.Channel(t.ID)
+			if err == nil {
+				oldCopy := *old
+				t.BeforeDelete = &oldCopy
+			}
 			err = s.ChannelRemove(t.Channel)
 		}
 	case *ThreadCreate:
@@ -1135,6 +1158,11 @@ func (s *State) OnInterface(se *Session, i interface{}) (err error) {
 		}
 	case *ThreadDelete:
 		if s.TrackThreads {
+			old, err := s.Channel(t.ID)
+			if err == nil {
+				oldCopy := *old
+				t.BeforeDelete = &oldCopy
+			}
 			err = s.ChannelRemove(t.Channel)
 		}
 	case *ThreadMemberUpdate:

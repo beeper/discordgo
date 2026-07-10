@@ -40,13 +40,14 @@ type Event struct {
 
 // A Ready stores all data for the websocket READY event.
 type Ready struct {
-	Version         int          `json:"v"`
-	SessionID       string       `json:"session_id"`
-	User            *User        `json:"user"`
-	Shard           *[2]int      `json:"shard"`
-	Application     *Application `json:"application"`
-	PrivateChannels []*Channel   `json:"private_channels"`
-	Guilds          []*Guild     `json:"guilds"`
+	Version          int          `json:"v"`
+	SessionID        string       `json:"session_id"`
+	User             *User        `json:"user"`
+	Shard            *[2]int      `json:"shard"`
+	Application      *Application `json:"application"`
+	PrivateChannels  []*Channel   `json:"private_channels"`
+	Guilds           []*Guild     `json:"guilds"`
+	ResumeGatewayURL string       `json:"resume_gateway_url"`
 
 	// Undocumented fields
 	ReadState         *ReadStateList         `json:"read_state"`
@@ -83,6 +84,7 @@ type ChannelUpdate struct {
 // ChannelDelete is the data for a ChannelDelete event.
 type ChannelDelete struct {
 	*Channel
+	BeforeDelete *Channel `json:"-"`
 }
 
 // ChannelPinsUpdate stores data for a ChannelPinsUpdate event.
@@ -107,6 +109,7 @@ type ThreadUpdate struct {
 // ThreadDelete is the data for a ThreadDelete event.
 type ThreadDelete struct {
 	*Channel
+	BeforeDelete *Channel `json:"-"`
 }
 
 // ThreadListSync is the data for a ThreadListSync event.
@@ -181,6 +184,7 @@ type GuildMemberUpdate struct {
 // GuildMemberRemove is the data for a GuildMemberRemove event.
 type GuildMemberRemove struct {
 	*Member
+	BeforeDelete *Member `json:"-"`
 }
 
 // GuildRoleCreate is the data for a GuildRoleCreate event.
@@ -191,12 +195,14 @@ type GuildRoleCreate struct {
 // GuildRoleUpdate is the data for a GuildRoleUpdate event.
 type GuildRoleUpdate struct {
 	*GuildRole
+	BeforeUpdate *Role `json:"-"`
 }
 
 // A GuildRoleDelete is the data for a GuildRoleDelete event.
 type GuildRoleDelete struct {
-	RoleID  string `json:"role_id"`
-	GuildID string `json:"guild_id"`
+	RoleID       string `json:"role_id"`
+	GuildID      string `json:"guild_id"`
+	BeforeDelete *Role  `json:"-"`
 }
 
 // A GuildEmojisUpdate is the data for a guild emoji update event.
@@ -343,6 +349,11 @@ type MessageReactionRemove struct {
 
 // MessageReactionRemoveAll is the data for a MessageReactionRemoveAll event.
 type MessageReactionRemoveAll struct {
+	*MessageReaction
+}
+
+// MessageReactionRemoveEmoji is the data for a MessageReactionRemoveEmoji event.
+type MessageReactionRemoveEmoji struct {
 	*MessageReaction
 }
 

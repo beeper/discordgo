@@ -153,7 +153,7 @@ func (s *Session) UpdateUserHeaders() {
 }
 
 func (s *Session) SetGatewayURL(url string) {
-	s.gateway = url + "?encoding=json&v=" + APIVersion + "&compress=zlib-stream"
+	s.gateway = url
 	s.noClearGateway = true
 }
 
