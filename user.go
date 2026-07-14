@@ -6,7 +6,7 @@ import (
 
 // UserFlags is the flags of "user" (see UserFlags* consts)
 // https://discord.com/developers/docs/resources/user#user-object-user-flags
-type UserFlags int
+type UserFlags uint64
 
 // Valid UserFlags values
 //

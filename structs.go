@@ -381,7 +381,7 @@ const (
 )
 
 // ChannelFlags represent flags of a channel/thread.
-type ChannelFlags int
+type ChannelFlags uint32
 
 // Block containing known ChannelFlags values.
 const (
@@ -1522,7 +1522,7 @@ type Role struct {
 
 // RoleFlags represent the flags of a Role.
 // https://discord.com/developers/docs/topics/permissions#role-object-role-flags
-type RoleFlags int
+type RoleFlags uint32
 
 // Block containing known RoleFlags values.
 const (
@@ -1644,7 +1644,7 @@ type Assets struct {
 
 // MemberFlags represent flags of a guild member.
 // https://discord.com/developers/docs/resources/guild#guild-member-object-guild-member-flags
-type MemberFlags int
+type MemberFlags uint32
 
 // Block containing known MemberFlags values.
 const (
@@ -2710,7 +2710,7 @@ const (
 
 // SKUFlags is a bitfield of flags used to differentiate user and server subscriptions (see SKUFlag* consts)
 // https://discord.com/developers/docs/monetization/skus#sku-object-sku-flags
-type SKUFlags int
+type SKUFlags uint32
 
 const (
 	// SKUFlagAvailable indicates that the SKU is available for purchase.

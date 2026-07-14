@@ -208,7 +208,7 @@ func (m *Message) GetCustomEmojis() []*Emoji {
 
 // MessageFlags is the flags of "message" (see MessageFlags* consts)
 // https://discord.com/developers/docs/resources/channel#message-object-message-flags
-type MessageFlags int
+type MessageFlags uint32
 
 // Valid MessageFlags values
 const (
@@ -411,7 +411,7 @@ type MessageAttachment struct {
 }
 
 // MessageAttachmentFlags is the flags of a message attachment.
-type MessageAttachmentFlags int
+type MessageAttachmentFlags uint32
 
 // Valid MessageAttachmentFlags values.
 const (
