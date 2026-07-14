@@ -9,23 +9,67 @@ import (
 type UserFlags int
 
 // Valid UserFlags values
+//
+// https://docs.discord.food/resources/user#user-flags
 const (
-	UserFlagDiscordEmployee           UserFlags = 1 << 0
-	UserFlagDiscordPartner            UserFlags = 1 << 1
-	UserFlagHypeSquadEvents           UserFlags = 1 << 2
-	UserFlagBugHunterLevel1           UserFlags = 1 << 3
-	UserFlagHouseBravery              UserFlags = 1 << 6
-	UserFlagHouseBrilliance           UserFlags = 1 << 7
-	UserFlagHouseBalance              UserFlags = 1 << 8
-	UserFlagEarlySupporter            UserFlags = 1 << 9
-	UserFlagTeamUser                  UserFlags = 1 << 10
-	UserFlagSystem                    UserFlags = 1 << 12
-	UserFlagBugHunterLevel2           UserFlags = 1 << 14
-	UserFlagVerifiedBot               UserFlags = 1 << 16
-	UserFlagVerifiedBotDeveloper      UserFlags = 1 << 17
-	UserFlagDiscordCertifiedModerator UserFlags = 1 << 18
-	UserFlagBotHTTPInteractions       UserFlags = 1 << 19
-	UserFlagActiveBotDeveloper        UserFlags = 1 << 22
+	UserFlagDiscordEmployee UserFlags = 1 << iota
+	UserFlagDiscordPartner
+	UserFlagHypeSquadEvents
+	UserFlagBugHunterLevel1
+	UserFlagMFASMS                // private
+	UserFlagPremiumPromoDismissed // private
+	UserFlagHouseBravery
+	UserFlagHouseBrilliance
+	UserFlagHouseBalance
+	UserFlagEarlySupporter
+	UserFlagTeamUser
+	UserFlagIsHubspotContact        // private, harvested
+	UserFlagSystem                  // legacy
+	UserFlagHasUnreadUrgentMessages // private
+	UserFlagBugHunterLevel2
+	UserFlagUnderageDeleted // private, harvested
+	UserFlagVerifiedBot
+	UserFlagVerifiedBotDeveloper
+	UserFlagDiscordCertifiedModerator
+	UserFlagBotHTTPInteractions
+	UserFlagSpammer
+	UserFlagDisablePremium     // private, legacy
+	UserFlagActiveBotDeveloper // legacy
+	UserFlagProvisionalAccount
+)
+
+// (9 bits, 24 through 32, are unknown)
+
+const (
+	UserFlagHighGlobalRatelimit        UserFlags = 1 << (iota + 33) // private, harvested
+	UserFlagDeleted                                                 // private, harvested
+	UserFlagDisabledSuspiciousActivity                              // private, harvested
+	UserFlagSelfDeleted                                             // private, harvested
+	UserFlagPremiumDiscriminator                                    // private, harvested
+	UserFlagUsedDesktopClient                                       // private, harvested
+	UserFlagUsedWebClient                                           // private, harvested
+	UserFlagUsedMobileClient                                        // private, harvested
+	UserFlagDisabled                                                // private, harvested
+)
+
+// (bit 42 is unknown)
+
+const (
+	UserFlagHasSessionStarted UserFlags = 1 << (iota + 43)
+	UserFlagQuarantined                 // private
+)
+
+// (bits 45 and 46 are unknown)
+
+const (
+	UserFlagPremiumEligibleForUniqueUsername UserFlags = 1 << (iota + 47)
+)
+
+// (bits 48 and 49 are unknown)
+
+const (
+	UserFlagCollaborator UserFlags = 1 << (iota + 50)
+	UserFlagRestrictedCollaborator
 )
 
 // UserPremiumType is the type of premium (nitro) subscription a user has (see UserPremiumType* consts).
