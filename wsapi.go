@@ -807,9 +807,6 @@ func (s *Session) onEvent(messageType websocket.MessageType, message []byte, isO
 	// Invalid Session
 	// Must respond with a Identify packet.
 	if e.Operation == 9 {
-		s.log(LogInformational, "Closing and reconnecting in response to Op9")
-		s.CloseWithCode(websocket.StatusServiceRestart)
-
 		var resumable bool
 		if err := json.Unmarshal(e.RawData, &resumable); err != nil {
 			s.log(LogError, "error unmarshalling invalid session event, %s", err)
@@ -823,6 +820,16 @@ func (s *Session) onEvent(messageType websocket.MessageType, message []byte, isO
 			atomic.StoreInt64(s.sequence, 0)
 		}
 
+		if isOnConnect {
+			// The Session's lock is already held; calling CloseWithCode or
+			// reconnect at this point would deadlock. Rely on the caller
+			// (Open) to respond appropriately.
+			s.log(LogInformational, "Got Op9 in connect handler, returning error")
+			return e, ErrInvalidSessionOnConnect
+		}
+
+		s.log(LogInformational, "Closing and reconnecting in response to Op9")
+		s.CloseWithCode(websocket.StatusServiceRestart)
 		s.reconnect()
 		return e, nil
 	}
