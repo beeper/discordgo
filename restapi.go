@@ -2101,14 +2101,15 @@ func (s *Session) ChannelMessageSendComplex(channelID string, data *MessageSend,
 		response, err = s.RequestRaw("POST", endpoint, contentType, body, endpoint, 0, options...)
 	} else {
 		if s.IsUser {
-			zero := 0
 			if data.Attachments != nil {
+				zero := 0
 				data.Type = &zero
 				if data.StickerIDs == nil {
 					emptyArr := make([]string, 0)
 					data.StickerIDs = &emptyArr
 				}
 			} else {
+				var zero MessageFlags
 				data.Flags = &zero
 				data.MobileNetworkType = "unknown"
 				if data.TTS == nil {
