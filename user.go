@@ -161,7 +161,7 @@ type User struct {
 
 	// The flags on a user's account.
 	// Only available when the request is authorized via a Bearer token.
-	Flags int `json:"flags"`
+	Flags UserFlags `json:"flags"`
 
 	// The user's primary guild.
 	PrimaryGuild UserPrimaryGuild `json:"primary_guild"`
