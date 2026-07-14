@@ -219,7 +219,7 @@ type Application struct {
 	PrimarySKUID        string   `json:"primary_sku_id"`
 	Slug                string   `json:"slug"`
 	CoverImage          string   `json:"cover_image"`
-	Flags               int      `json:"flags,omitempty"`
+	Flags               uint64   `json:"flags,omitempty"`
 
 	IntegrationTypesConfig map[ApplicationIntegrationType]*ApplicationIntegrationTypeConfig `json:"integration_types,omitempty"`
 
@@ -637,7 +637,7 @@ type ThreadMember struct {
 	// The time the current user last joined the thread
 	JoinTimestamp time.Time `json:"join_timestamp"`
 	// Any user-thread settings, currently only used for notifications
-	Flags int `json:"flags"`
+	Flags uint32 `json:"flags"`
 	// Additional information about the user.
 	// NOTE: only present if the withMember parameter is set to true
 	// when calling Session.ThreadMembers or Session.ThreadMember.
@@ -2506,7 +2506,7 @@ type Activity struct {
 	Assets        Assets       `json:"assets,omitempty"`
 	Secrets       Secrets      `json:"secrets,omitempty"`
 	Instance      bool         `json:"instance,omitempty"`
-	Flags         int          `json:"flags,omitempty"`
+	Flags         uint32       `json:"flags,omitempty"`
 }
 
 // UnmarshalJSON is a custom unmarshaljson to make CreatedAt a time.Time instead of an int
@@ -2525,7 +2525,7 @@ func (activity *Activity) UnmarshalJSON(b []byte) error {
 		Assets        Assets       `json:"assets,omitempty"`
 		Secrets       Secrets      `json:"secrets,omitempty"`
 		Instance      bool         `json:"instance,omitempty"`
-		Flags         int          `json:"flags,omitempty"`
+		Flags         uint32       `json:"flags,omitempty"`
 	}{}
 	err := Unmarshal(b, &temp)
 	if err != nil {
