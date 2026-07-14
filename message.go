@@ -259,8 +259,7 @@ type MessageSend struct {
 	AllowedMentions *MessageAllowedMentions `json:"allowed_mentions,omitempty"`
 	Reference       *MessageReference       `json:"message_reference,omitempty"`
 	StickerIDs      *[]string               `json:"sticker_ids,omitempty"`
-	//Flags           MessageFlags            `json:"flags,omitempty"`
-	Poll *Poll `json:"poll,omitempty"`
+	Poll            *Poll                   `json:"poll,omitempty"`
 
 	Attachments []*MessageAttachment `json:"attachments,omitempty"`
 
@@ -270,8 +269,8 @@ type MessageSend struct {
 	// TODO: Remove this when compatibility is not required.
 	Embed *MessageEmbed `json:"-"`
 
-	Flags *int `json:"flags,omitempty"`
-	Type  *int `json:"type,omitempty"`
+	Flags *MessageFlags `json:"flags,omitempty"`
+	Type  *int          `json:"type,omitempty"`
 
 	MobileNetworkType string `json:"mobile_network_type,omitempty"`
 }
