@@ -393,6 +393,7 @@ type MessageAttachment struct {
 	URL         string `json:"url,omitempty"`
 	ProxyURL    string `json:"proxy_url,omitempty"`
 	Filename    string `json:"filename,omitempty"`
+	Title       string `json:"title,omitempty"`
 	Description string `json:"description,omitempty"`
 	ContentType string `json:"content_type,omitempty"`
 	Width       int    `json:"width,omitempty"`

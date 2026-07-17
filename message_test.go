@@ -1,8 +1,34 @@
 package discordgo
 
 import (
+	"encoding/json"
 	"testing"
 )
+
+func TestMessageAttachmentTitleJSONRoundTrip(t *testing.T) {
+	const title = "测试报告-final😀.pdf"
+
+	var attachment MessageAttachment
+	if err := json.Unmarshal([]byte(`{"id":"123","filename":"final.pdf","title":"测试报告-final😀.pdf"}`), &attachment); err != nil {
+		t.Fatalf("failed to unmarshal attachment: %v", err)
+	}
+	if attachment.Title != title {
+		t.Fatalf("expected title %q, got %q", title, attachment.Title)
+	}
+
+	data, err := json.Marshal(&attachment)
+	if err != nil {
+		t.Fatalf("failed to marshal attachment: %v", err)
+	}
+
+	var roundTripped MessageAttachment
+	if err = json.Unmarshal(data, &roundTripped); err != nil {
+		t.Fatalf("failed to unmarshal round-tripped attachment: %v", err)
+	}
+	if roundTripped.Title != title {
+		t.Fatalf("expected round-tripped title %q, got %q", title, roundTripped.Title)
+	}
+}
 
 func TestContentWithMoreMentionsReplaced(t *testing.T) {
 	s := &Session{StateEnabled: true, State: NewState()}
