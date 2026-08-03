@@ -87,7 +87,7 @@ func (umc *unmarshalableMessageComponent) UnmarshalJSON(src []byte) error {
 	case CheckpointCardComponent:
 		umc.MessageComponent = &CheckpointCard{}
 	default:
-		return fmt.Errorf("unknown component type: %d", v.Type)
+		umc.MessageComponent = &UnknownComponent{}
 	}
 	return json.Unmarshal(src, umc.MessageComponent)
 }
@@ -717,6 +717,34 @@ func (c CheckpointCard) MarshalJSON() ([]byte, error) {
 		checkpointCard: checkpointCard(c),
 		Type:           c.Type(),
 	})
+}
+
+type UnknownComponent struct {
+	ComponentType ComponentType   `json:"-"`
+	Raw           json.RawMessage `json:"-"`
+}
+
+func (u UnknownComponent) Type() ComponentType {
+	return u.ComponentType
+}
+
+func (u *UnknownComponent) UnmarshalJSON(src []byte) error {
+	var v struct {
+		Type ComponentType `json:"type"`
+	}
+	if err := json.Unmarshal(src, &v); err != nil {
+		return err
+	}
+	u.ComponentType = v.Type
+	u.Raw = append(json.RawMessage(nil), src...)
+	return nil
+}
+
+func (u UnknownComponent) MarshalJSON() ([]byte, error) {
+	if u.Raw == nil {
+		return []byte("null"), nil
+	}
+	return u.Raw, nil
 }
 
 // UnfurledMediaItem represents an unfurled media item.
