@@ -24,9 +24,14 @@ const (
 	MediaGalleryComponent          ComponentType = 12
 	FileComponentType              ComponentType = 13
 	SeparatorComponent             ComponentType = 14
+	ContentInventoryEntryComponent ComponentType = 16
 	ContainerComponent             ComponentType = 17
 	LabelComponent                 ComponentType = 18
 	FileUploadComponent            ComponentType = 19
+	CheckpointCardComponent        ComponentType = 20
+	RadioGroupComponent            ComponentType = 21
+	CheckboxGroupComponent         ComponentType = 22
+	CheckboxComponent              ComponentType = 23
 )
 
 // MessageComponent is a base interface for all message components.
@@ -71,12 +76,16 @@ func (umc *unmarshalableMessageComponent) UnmarshalJSON(src []byte) error {
 		umc.MessageComponent = &FileComponent{}
 	case SeparatorComponent:
 		umc.MessageComponent = &Separator{}
+	case ContentInventoryEntryComponent:
+		umc.MessageComponent = &ContentInventoryEntry{}
 	case ContainerComponent:
 		umc.MessageComponent = &Container{}
 	case LabelComponent:
 		umc.MessageComponent = &Label{}
 	case FileUploadComponent:
 		umc.MessageComponent = &FileUpload{}
+	case CheckpointCardComponent:
+		umc.MessageComponent = &CheckpointCard{}
 	default:
 		return fmt.Errorf("unknown component type: %d", v.Type)
 	}
@@ -665,6 +674,48 @@ func (f FileUpload) MarshalJSON() ([]byte, error) {
 	}{
 		fileUpload: fileUpload(f),
 		Type:       f.Type(),
+	})
+}
+
+type ContentInventoryEntry struct {
+	ID    int             `json:"id,omitempty"`
+	Entry json.RawMessage `json:"content_inventory_entry,omitempty"`
+}
+
+func (ContentInventoryEntry) Type() ComponentType {
+	return ContentInventoryEntryComponent
+}
+
+func (c ContentInventoryEntry) MarshalJSON() ([]byte, error) {
+	type contentInventoryEntry ContentInventoryEntry
+
+	return Marshal(struct {
+		contentInventoryEntry
+		Type ComponentType `json:"type"`
+	}{
+		contentInventoryEntry: contentInventoryEntry(c),
+		Type:                  c.Type(),
+	})
+}
+
+type CheckpointCard struct {
+	ID             int             `json:"id,omitempty"`
+	CheckpointData json.RawMessage `json:"checkpoint_data,omitempty"`
+}
+
+func (CheckpointCard) Type() ComponentType {
+	return CheckpointCardComponent
+}
+
+func (c CheckpointCard) MarshalJSON() ([]byte, error) {
+	type checkpointCard CheckpointCard
+
+	return Marshal(struct {
+		checkpointCard
+		Type ComponentType `json:"type"`
+	}{
+		checkpointCard: checkpointCard(c),
+		Type:           c.Type(),
 	})
 }
 
