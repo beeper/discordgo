@@ -336,6 +336,25 @@ func (s *Session) listen(ctx context.Context, wsConn *websocket.Conn, listening 
 	}
 }
 
+// heartbeatOp is the standard gateway Op 1 heartbeat payload.
+type heartbeatOp struct {
+	Op   int   `json:"op"`
+	Data int64 `json:"d"`
+}
+
+// newHeartbeatOp returns the heartbeat payload for this session type. Bot
+// sessions must send the standard Op 1: since 2026-08-07 Discord rejects the
+// client-internal Op 40 QoS heartbeat on bot connections with close 4002
+// ("Error while decoding payload"), which puts the session in a reconnect
+// loop that trips the session start limit and gets the bot token reset.
+// User sessions keep the QoS heartbeat that the official client sends.
+func (s *Session) newHeartbeatOp(seq int64) interface{} {
+	if s.IsUser {
+		return newForegroundedQosHeartbeatOp(seq)
+	}
+	return heartbeatOp{Op: 1, Data: seq}
+}
+
 func newForegroundedQosHeartbeatOp(seq int64) qosHeartbeatOp {
 	return qosHeartbeatOp{
 		Op: 40,
@@ -414,7 +433,7 @@ func (s *Session) heartbeat(ctx context.Context, wsConn *websocket.Conn, listeni
 		s.log(LogDebug, "sending gateway websocket heartbeat seq %d", sequence)
 		s.wsMutex.Lock()
 		s.LastHeartbeatSent = time.Now().UTC()
-		err = wsjson.Write(ctx, wsConn, newForegroundedQosHeartbeatOp(sequence))
+		err = wsjson.Write(ctx, wsConn, s.newHeartbeatOp(sequence))
 		s.wsMutex.Unlock()
 		if err != nil || time.Now().UTC().Sub(last) > (heartbeatIntervalMsec*FailedHeartbeatAcks) {
 			if err != nil {
@@ -780,7 +799,7 @@ func (s *Session) onEvent(messageType websocket.MessageType, message []byte, isO
 	if e.Operation == 1 {
 		s.log(LogInformational, "sending heartbeat in response to Op1")
 		s.wsMutex.Lock()
-		err = wsjson.Write(s.wsConnCtx, s.wsConn, newForegroundedQosHeartbeatOp(atomic.LoadInt64(s.sequence)))
+		err = wsjson.Write(s.wsConnCtx, s.wsConn, s.newHeartbeatOp(atomic.LoadInt64(s.sequence)))
 		s.wsMutex.Unlock()
 		if err != nil {
 			s.log(LogError, "error sending heartbeat in response to Op1")
