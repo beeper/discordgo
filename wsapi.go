@@ -336,18 +336,11 @@ func (s *Session) listen(ctx context.Context, wsConn *websocket.Conn, listening 
 	}
 }
 
-// heartbeatOp is the standard gateway Op 1 heartbeat payload.
 type heartbeatOp struct {
 	Op   int   `json:"op"`
 	Data int64 `json:"d"`
 }
 
-// newHeartbeatOp returns the heartbeat payload for this session type. Bot
-// sessions must send the standard Op 1: since 2026-08-07 Discord rejects the
-// client-internal Op 40 QoS heartbeat on bot connections with close 4002
-// ("Error while decoding payload"), which puts the session in a reconnect
-// loop that trips the session start limit and gets the bot token reset.
-// User sessions keep the QoS heartbeat that the official client sends.
 func (s *Session) newHeartbeatOp(seq int64) interface{} {
 	if s.IsUser {
 		return newForegroundedQosHeartbeatOp(seq)
