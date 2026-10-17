@@ -164,6 +164,9 @@ type Message struct {
 	// A poll object.
 	Poll *Poll `json:"poll"`
 
+	// The call associated with the message, if this is a private call message.
+	Call *MessageCall `json:"call,omitempty"`
+
 	// Nonce is used for optimistic message sending. Only present in MESSAGE_CREATE
 	// events to confirm delivery of a message with a matching nonce.
 	Nonce StringOrInt `json:"nonce,omitempty"`

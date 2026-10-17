@@ -792,6 +792,18 @@ func (s *State) MessageAdd(message *Message) error {
 			if message.Components != nil {
 				m.Components = message.Components
 			}
+			if message.Call != nil {
+				if m.Call == nil {
+					m.Call = message.Call
+				} else {
+					if message.Call.Participants != nil {
+						m.Call.Participants = message.Call.Participants
+					}
+					if message.Call.EndedTimestamp != nil {
+						m.Call.EndedTimestamp = message.Call.EndedTimestamp
+					}
+				}
+			}
 
 			return nil
 		}
