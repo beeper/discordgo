@@ -50,6 +50,8 @@ var (
 	Unmarshal func(src []byte, v interface{}) error = json.Unmarshal
 )
 
+const defaultNonJSONRateLimitRetryAfter = 5 * time.Second
+
 // RESTError stores error information about a request with a bad response code.
 // Message is not always present, there are cases where api calls can fail
 // without returning a json message.
@@ -342,7 +344,17 @@ func (s *Session) RequestWithLockedBucket(method, urlStr, contentType string, b 
 		rl := TooManyRequests{}
 		err = Unmarshal(response, &rl)
 		if err != nil {
-			s.log(LogError, "rate limit unmarshal error, %s", err)
+			if !cfg.ShouldRetryOnRateLimit || sequence >= cfg.MaxRestRetries {
+				s.log(LogError, "rate limit unmarshal error, %s", err)
+				return
+			}
+			retryAfter := defaultNonJSONRateLimitRetryAfter
+			if seconds, parseErr := strconv.ParseFloat(resp.Header.Get("Retry-After"), 64); parseErr == nil && seconds > 0 {
+				retryAfter = time.Duration(seconds * float64(time.Second))
+			}
+			s.log(LogInformational, "Rate Limiting %s with a non-JSON response, retry in %v", urlStr, retryAfter)
+			time.Sleep(retryAfter)
+			response, err = s.RequestWithLockedBucket(method, urlStr, contentType, b, s.Ratelimiter.LockBucketObject(bucket), sequence+1, options...)
 			return
 		}
 
