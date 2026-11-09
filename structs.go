@@ -531,6 +531,8 @@ type Channel struct {
 	// Conjecture: when the private channel was determined to be a message request.
 	// This can postdate when the first message was sent.
 	IsMessageRequestTimestamp *time.Time `json:"is_message_request_timestamp"`
+
+	IsSpam bool `json:"is_spam"`
 }
 
 // Mention returns a string which mentions the channel
