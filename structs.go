@@ -1810,9 +1810,10 @@ const (
 
 // A Relationship between the logged in user and Relationship.User
 type Relationship struct {
-	Type     RelationshipType `json:"type"`
-	ID       string           `json:"id"`
-	Nickname string           `json:"nickname,omitempty"`
+	Type          RelationshipType `json:"type"`
+	ID            string           `json:"id"`
+	Nickname      string           `json:"nickname,omitempty"`
+	IsSpamRequest bool             `json:"is_spam_request,omitempty"`
 }
 
 // A TooManyRequests struct holds information received from Discord
