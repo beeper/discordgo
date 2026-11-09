@@ -342,6 +342,13 @@ type MessageReactionAdd struct {
 	Member *Member `json:"member,omitempty"`
 }
 
+type MessageReactionAddMany struct {
+	ChannelID string                  `json:"channel_id"`
+	MessageID string                  `json:"message_id"`
+	GuildID   string                  `json:"guild_id,omitempty"`
+	Reactions []*MessageReactionBatch `json:"reactions"`
+}
+
 // MessageReactionRemove is the data for a MessageReactionRemove event.
 type MessageReactionRemove struct {
 	*MessageReaction

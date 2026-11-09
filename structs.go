@@ -2466,6 +2466,11 @@ type MessageReaction struct {
 	GuildID   string `json:"guild_id,omitempty"`
 }
 
+type MessageReactionBatch struct {
+	Emoji Emoji    `json:"emoji"`
+	Users []string `json:"users"`
+}
+
 // GatewayBotResponse stores the data for the gateway/bot response
 type GatewayBotResponse struct {
 	URL               string             `json:"url"`
