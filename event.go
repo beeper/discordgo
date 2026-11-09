@@ -314,7 +314,9 @@ func (s *Session) onReady(r *Ready) {
 	s.resumeGatewayURL = r.ResumeGatewayURL
 
 	if r.AuthToken != "" {
+		s.tokenLock.Lock()
 		s.Token = r.AuthToken
 		s.Identify.Token = r.AuthToken
+		s.tokenLock.Unlock()
 	}
 }
