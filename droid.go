@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -30,8 +31,11 @@ var (
 	droidCapabilities      = 1767421
 	droidClientBuildNumber = 667580
 	droidGatewayURL        = ""
-	mainPageAttempted      = false
+	mainPageLoaded         = false
+	mainPageLastFailure    time.Time
 )
+
+const mainPageRetryInterval = 10 * time.Minute
 
 var mainPageLoadLock sync.Mutex
 var droidPropsLock sync.RWMutex
@@ -207,7 +211,7 @@ var buildNumberRegex = regexp.MustCompile(`(?:buildNumber|build_number):\s?['"]?
 func (s *Session) LoadMainPage(ctx context.Context) error {
 	mainPageLoadLock.Lock()
 	defer mainPageLoadLock.Unlock()
-	if mainPageAttempted {
+	if mainPageLoaded || time.Since(mainPageLastFailure) < mainPageRetryInterval {
 		if droidGatewayURL != "" {
 			s.SetGatewayURL(droidGatewayURL)
 		}
@@ -216,8 +220,12 @@ func (s *Session) LoadMainPage(ctx context.Context) error {
 		}
 		return nil
 	}
-	mainPageAttempted = true
-	return s.loadMainPage(ctx)
+	if err := s.loadMainPage(ctx); err != nil {
+		mainPageLastFailure = time.Now()
+		return err
+	}
+	mainPageLoaded = true
+	return nil
 }
 
 func (s *Session) loadMainPage(ctx context.Context) error {
