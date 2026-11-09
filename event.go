@@ -312,4 +312,9 @@ func (s *Session) onReady(r *Ready) {
 
 	// Store the ResumeGatewayURL within the Session struct.
 	s.resumeGatewayURL = r.ResumeGatewayURL
+
+	if r.AuthToken != "" {
+		s.Token = r.AuthToken
+		s.Identify.Token = r.AuthToken
+	}
 }
