@@ -374,6 +374,30 @@ type PresencesReplace []*Presence
 type PresenceUpdate struct {
 	Presence
 	GuildID string `json:"guild_id"`
+
+	UserAvatarPresent     bool `json:"-"`
+	UserGlobalNamePresent bool `json:"-"`
+}
+
+func (p *PresenceUpdate) UnmarshalJSON(data []byte) error {
+	type presenceUpdate PresenceUpdate
+	var decoded presenceUpdate
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	var fields struct {
+		User struct {
+			Avatar     json.RawMessage `json:"avatar"`
+			GlobalName json.RawMessage `json:"global_name"`
+		} `json:"user"`
+	}
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	decoded.UserAvatarPresent = fields.User.Avatar != nil
+	decoded.UserGlobalNamePresent = fields.User.GlobalName != nil
+	*p = PresenceUpdate(decoded)
+	return nil
 }
 
 // Resumed is the data for a Resumed event.
