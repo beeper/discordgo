@@ -405,10 +405,11 @@ type ChannelRecipientAdd struct {
 
 // TypingStart is the data for a TypingStart event.
 type TypingStart struct {
-	UserID    string `json:"user_id"`
-	ChannelID string `json:"channel_id"`
-	GuildID   string `json:"guild_id,omitempty"`
-	Timestamp int    `json:"timestamp"`
+	UserID    string  `json:"user_id"`
+	ChannelID string  `json:"channel_id"`
+	GuildID   string  `json:"guild_id,omitempty"`
+	Timestamp int     `json:"timestamp"`
+	Member    *Member `json:"member,omitempty"`
 }
 
 // UserUpdate is the data for a UserUpdate event.
