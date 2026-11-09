@@ -2462,6 +2462,7 @@ type MessageReaction struct {
 	Emoji     Emoji  `json:"emoji"`
 	ChannelID string `json:"channel_id"`
 	GuildID   string `json:"guild_id,omitempty"`
+	Burst     bool   `json:"burst,omitempty"`
 }
 
 type MessageReactionBatch struct {
