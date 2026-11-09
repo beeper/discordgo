@@ -30,7 +30,7 @@ var (
 	droidCapabilities      = 1767421
 	droidClientBuildNumber = 667580
 	droidGatewayURL        = ""
-	mainPageLoaded         = false
+	mainPageAttempted      = false
 )
 
 var mainPageLoadLock sync.Mutex
@@ -207,13 +207,20 @@ var buildNumberRegex = regexp.MustCompile(`(?:buildNumber|build_number):\s?['"]?
 func (s *Session) LoadMainPage(ctx context.Context) error {
 	mainPageLoadLock.Lock()
 	defer mainPageLoadLock.Unlock()
-	if mainPageLoaded && droidGatewayURL != "" {
-		s.SetGatewayURL(droidGatewayURL)
+	if mainPageAttempted {
+		if droidGatewayURL != "" {
+			s.SetGatewayURL(droidGatewayURL)
+		}
 		if props, ok := s.Identify.Properties.(UserIdentifyProperties); ok && props.ClientBuildNumber != DroidClientBuildNumber() {
 			s.UpdateUserHeaders()
 		}
 		return nil
 	}
+	mainPageAttempted = true
+	return s.loadMainPage(ctx)
+}
+
+func (s *Session) loadMainPage(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://discord.com/channels/@me", nil)
 	if err != nil {
 		return fmt.Errorf("failed to prepare request: %w", err)
@@ -289,7 +296,6 @@ func (s *Session) LoadMainPage(ctx context.Context) error {
 	s.log(LogInformational, "Found build number %d from JS file %s", buildNumberInt, string(mainJSMatch[1]))
 	// TODO parse capabilities too?
 	s.UpdateVersion(buildNumberInt, droidCapabilities)
-	mainPageLoaded = true
 
 	return nil
 }
