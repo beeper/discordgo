@@ -1885,6 +1885,11 @@ type PtrAck struct {
 	Token *string `json:"token"`
 }
 
+type ManualAck struct {
+	Manual       bool `json:"manual"`
+	MentionCount int  `json:"mention_count"`
+}
+
 // A GuildRole stores data for guild roles.
 type GuildRole struct {
 	Role    *Role  `json:"role"`

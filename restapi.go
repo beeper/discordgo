@@ -2057,6 +2057,11 @@ func (s *Session) ChannelMessageAckNoToken(channelID, messageID string, options 
 	return
 }
 
+func (s *Session) ChannelMessageAckManual(channelID, messageID string, mentionCount int, options ...RequestOption) (err error) {
+	_, err = s.RequestWithBucketID("POST", EndpointChannelMessageAck(channelID, messageID), &ManualAck{Manual: true, MentionCount: mentionCount}, EndpointChannelMessageAck(channelID, ""), options...)
+	return
+}
+
 // ChannelMessageSend sends a message to the given channel.
 // channelID : The ID of a Channel.
 // content   : The message to send.
