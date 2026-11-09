@@ -159,7 +159,7 @@ func (s *Session) Open() error {
 
 	// The first response from Discord should be an Op 10 (Hello) Packet.
 	// When processed by onEvent the heartbeat goroutine will be started.
-	mt, m, err := s.wsConn.Read(s.wsConnCtx)
+	mt, m, err := s.wsConn.Read(dialCtx)
 	if err != nil {
 		return err
 	}
@@ -225,7 +225,7 @@ func (s *Session) Open() error {
 	}
 
 	// Now Discord should send us a READY or RESUMED packet.
-	mt, m, err = s.wsConn.Read(s.wsConnCtx)
+	mt, m, err = s.wsConn.Read(dialCtx)
 	if err != nil {
 		return err
 	}
