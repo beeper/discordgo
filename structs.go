@@ -153,6 +153,8 @@ type Session struct {
 
 	noClearGateway bool
 
+	tokenLock sync.RWMutex
+
 	// stores session ID of current Gateway connection
 	sessionID string
 

@@ -252,8 +252,11 @@ func (s *Session) RequestWithLockedBucket(method, urlStr, contentType string, b 
 
 	// Not used on initial login..
 	// TODO: Verify if a login, otherwise complain about no-token
-	if s.Token != "" {
-		req.Header.Set("authorization", s.Token)
+	s.tokenLock.RLock()
+	token := s.Token
+	s.tokenLock.RUnlock()
+	if token != "" {
+		req.Header.Set("authorization", token)
 	}
 
 	// Discord's API returns a 400 Bad Request is Content-Type is set, but the

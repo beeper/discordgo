@@ -48,6 +48,7 @@ type Ready struct {
 	PrivateChannels  []*Channel   `json:"private_channels"`
 	Guilds           []*Guild     `json:"guilds"`
 	ResumeGatewayURL string       `json:"resume_gateway_url"`
+	AuthToken        string       `json:"auth_token,omitempty"`
 
 	// Undocumented fields
 	ReadState         *ReadStateList         `json:"read_state"`
