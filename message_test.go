@@ -1,7 +1,10 @@
 package discordgo
 
 import (
+	"encoding/json"
+	"reflect"
 	"testing"
+	"time"
 )
 
 func TestContentWithMoreMentionsReplaced(t *testing.T) {
@@ -107,5 +110,184 @@ func TestMessageReference_DefaultTypeIsDefault(t *testing.T) {
 	r := MessageReference{}
 	if r.Type != MessageReferenceTypeDefault {
 		t.Error("Default message type should be MessageReferenceTypeDefault")
+	}
+}
+
+func TestMessage_UnmarshalCall(t *testing.T) {
+	var msg Message
+	err := json.Unmarshal([]byte(`{
+		"id": "123",
+		"channel_id": "456",
+		"type": 3,
+		"timestamp": "2026-06-15T10:00:00.000000+00:00",
+		"call": {
+			"participants": ["111", "222"],
+			"ended_timestamp": "2026-06-15T10:02:03.456000+00:00"
+		}
+	}`), &msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if msg.Type != MessageTypeCall {
+		t.Fatalf("Message.Type = %d, want %d", msg.Type, MessageTypeCall)
+	}
+	if msg.Call == nil {
+		t.Fatal("Message.Call is nil")
+	}
+	if want := []string{"111", "222"}; !reflect.DeepEqual(msg.Call.Participants, want) {
+		t.Fatalf("Message.Call.Participants = %v, want %v", msg.Call.Participants, want)
+	}
+
+	wantEnded, err := time.Parse(time.RFC3339Nano, "2026-06-15T10:02:03.456000+00:00")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if msg.Call.EndedTimestamp == nil {
+		t.Fatal("Message.Call.EndedTimestamp is nil")
+	}
+	if !msg.Call.EndedTimestamp.Equal(wantEnded) {
+		t.Fatalf("Message.Call.EndedTimestamp = %s, want %s", msg.Call.EndedTimestamp.Format(time.RFC3339Nano), wantEnded.Format(time.RFC3339Nano))
+	}
+}
+
+func TestMessage_UnmarshalActiveCall(t *testing.T) {
+	var msg Message
+	err := json.Unmarshal([]byte(`{
+		"id": "123",
+		"channel_id": "456",
+		"type": 3,
+		"timestamp": "2026-06-15T10:00:00.000000+00:00",
+		"call": {
+			"participants": ["111"],
+			"ended_timestamp": null
+		}
+	}`), &msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if msg.Call == nil {
+		t.Fatal("Message.Call is nil")
+	}
+	if msg.Call.EndedTimestamp != nil {
+		t.Fatalf("Message.Call.EndedTimestamp = %s, want nil", msg.Call.EndedTimestamp.Format(time.RFC3339Nano))
+	}
+}
+
+func TestState_MessageAddMergesCall(t *testing.T) {
+	state := NewState()
+	state.MaxMessageCount = 10
+	err := state.ChannelAdd(&Channel{
+		ID:   "456",
+		Type: ChannelTypeDM,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	started := time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC)
+	ended := started.Add(2*time.Minute + 3*time.Second)
+	err = state.MessageAdd(&Message{
+		ID:        "123",
+		ChannelID: "456",
+		Type:      MessageTypeCall,
+		Timestamp: started,
+		Author: &User{
+			ID:       "111",
+			Username: "caller",
+		},
+		Call: &MessageCall{
+			Participants: []string{"111"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = state.MessageAdd(&Message{
+		ID:        "123",
+		ChannelID: "456",
+		Call: &MessageCall{
+			Participants:   []string{"111", "222"},
+			EndedTimestamp: &ended,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg, err := state.Message("456", "123")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if msg.Author == nil || msg.Author.ID != "111" {
+		t.Fatalf("Message.Author = %#v, want caller preserved", msg.Author)
+	}
+	if msg.Call == nil {
+		t.Fatal("Message.Call is nil")
+	}
+	if want := []string{"111", "222"}; !reflect.DeepEqual(msg.Call.Participants, want) {
+		t.Fatalf("Message.Call.Participants = %v, want %v", msg.Call.Participants, want)
+	}
+	if msg.Call.EndedTimestamp == nil {
+		t.Fatal("Message.Call.EndedTimestamp is nil")
+	}
+	if !msg.Call.EndedTimestamp.Equal(ended) {
+		t.Fatalf("Message.Call.EndedTimestamp = %s, want %s", msg.Call.EndedTimestamp.Format(time.RFC3339Nano), ended.Format(time.RFC3339Nano))
+	}
+}
+
+func TestState_MessageAddMergesPartialCall(t *testing.T) {
+	state := NewState()
+	state.MaxMessageCount = 10
+	err := state.ChannelAdd(&Channel{
+		ID:   "456",
+		Type: ChannelTypeDM,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	started := time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC)
+	ended := started.Add(2*time.Minute + 3*time.Second)
+	err = state.MessageAdd(&Message{
+		ID:        "123",
+		ChannelID: "456",
+		Type:      MessageTypeCall,
+		Timestamp: started,
+		Call: &MessageCall{
+			Participants: []string{"111", "222"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = state.MessageAdd(&Message{
+		ID:        "123",
+		ChannelID: "456",
+		Call: &MessageCall{
+			EndedTimestamp: &ended,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg, err := state.Message("456", "123")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if msg.Call == nil {
+		t.Fatal("Message.Call is nil")
+	}
+	if want := []string{"111", "222"}; !reflect.DeepEqual(msg.Call.Participants, want) {
+		t.Fatalf("Message.Call.Participants = %v, want %v", msg.Call.Participants, want)
+	}
+	if msg.Call.EndedTimestamp == nil {
+		t.Fatal("Message.Call.EndedTimestamp is nil")
+	}
+	if !msg.Call.EndedTimestamp.Equal(ended) {
+		t.Fatalf("Message.Call.EndedTimestamp = %s, want %s", msg.Call.EndedTimestamp.Format(time.RFC3339Nano), ended.Format(time.RFC3339Nano))
 	}
 }
