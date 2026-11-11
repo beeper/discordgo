@@ -541,7 +541,7 @@ func (s *State) ChannelRecipientAdd(channelID string, user *User) error {
 	}
 	recipients := slices.Clone(channel.Recipients)
 	index := slices.IndexFunc(recipients, func(recipient *User) bool {
-		return recipient.ID == user.ID
+		return recipient != nil && recipient.ID == user.ID
 	})
 	if index < 0 {
 		recipients = append(recipients, user)
@@ -566,7 +566,7 @@ func (s *State) ChannelRecipientRemove(channelID, userID string) error {
 		return ErrStateNotFound
 	}
 	channel.Recipients = slices.DeleteFunc(slices.Clone(channel.Recipients), func(recipient *User) bool {
-		return recipient.ID == userID
+		return recipient != nil && recipient.ID == userID
 	})
 	channel.RecipientIDs = slices.DeleteFunc(slices.Clone(channel.RecipientIDs), func(id string) bool {
 		return id == userID
@@ -1190,11 +1190,11 @@ func (s *State) OnInterface(se *Session, i interface{}) (err error) {
 			err = s.ChannelRemove(t.Channel)
 		}
 	case *ChannelRecipientAdd:
-		if s.TrackChannels {
+		if s.TrackChannels && t.User != nil {
 			err = s.ChannelRecipientAdd(t.ChannelID, t.User)
 		}
 	case *ChannelRecipientRemove:
-		if s.TrackChannels {
+		if s.TrackChannels && t.User != nil {
 			err = s.ChannelRecipientRemove(t.ChannelID, t.User.ID)
 		}
 	case *ThreadCreate:
