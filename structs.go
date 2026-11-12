@@ -1883,7 +1883,8 @@ type Ack struct {
 
 // An PtrAck is used to ack messages
 type PtrAck struct {
-	Token *string `json:"token"`
+	Token      *string `json:"token"`
+	LastViewed int     `json:"last_viewed,omitempty"`
 }
 
 type ManualAck struct {
