@@ -153,6 +153,8 @@ type Session struct {
 
 	noClearGateway bool
 
+	tokenLock sync.RWMutex
+
 	// stores session ID of current Gateway connection
 	sessionID string
 
@@ -531,6 +533,8 @@ type Channel struct {
 	// Conjecture: when the private channel was determined to be a message request.
 	// This can postdate when the first message was sent.
 	IsMessageRequestTimestamp *time.Time `json:"is_message_request_timestamp"`
+
+	IsSpam bool `json:"is_spam"`
 }
 
 // Mention returns a string which mentions the channel
@@ -1810,9 +1814,10 @@ const (
 
 // A Relationship between the logged in user and Relationship.User
 type Relationship struct {
-	Type     RelationshipType `json:"type"`
-	ID       string           `json:"id"`
-	Nickname string           `json:"nickname,omitempty"`
+	Type          RelationshipType `json:"type"`
+	ID            string           `json:"id"`
+	Nickname      string           `json:"nickname,omitempty"`
+	IsSpamRequest bool             `json:"is_spam_request,omitempty"`
 }
 
 // A TooManyRequests struct holds information received from Discord
@@ -1879,6 +1884,11 @@ type Ack struct {
 // An PtrAck is used to ack messages
 type PtrAck struct {
 	Token *string `json:"token"`
+}
+
+type ManualAck struct {
+	Manual       bool `json:"manual"`
+	MentionCount int  `json:"mention_count"`
 }
 
 // A GuildRole stores data for guild roles.
