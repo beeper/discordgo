@@ -2070,7 +2070,7 @@ func (s *Session) ChannelMessageAck(channelID, messageID, lastToken string) (st 
 // messageID : the ID of a Message
 func (s *Session) ChannelMessageAckNoToken(channelID, messageID string, options ...RequestOption) (st *PtrAck, err error) {
 
-	lastViewed := int(time.Since(time.UnixMilli(1420070400000)).Hours() / 24)
+	lastViewed := int(time.Since(time.UnixMilli(SnowflakeEpoch)).Hours() / 24)
 	body, err := s.RequestWithBucketID("POST", EndpointChannelMessageAck(channelID, messageID), &PtrAck{LastViewed: lastViewed}, EndpointChannelMessageAck(channelID, ""), options...)
 	if err != nil {
 		return
