@@ -80,7 +80,6 @@ func New(token string) (s *Session, err error) {
 		s.Identify.Presence.Status = droidStatus
 		s.Identify.Presence.AFK = true
 
-		s.Identify.Capabilities = droidCapabilities
 		s.Identify.ClientState = &ClientState{
 			//HighestLastMessageID:     "0",
 			//ReadStateVersion:         0,
