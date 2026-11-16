@@ -48,6 +48,7 @@ type Ready struct {
 	PrivateChannels  []*Channel   `json:"private_channels"`
 	Guilds           []*Guild     `json:"guilds"`
 	ResumeGatewayURL string       `json:"resume_gateway_url"`
+	AuthToken        string       `json:"auth_token,omitempty"`
 
 	// Undocumented fields
 	ReadState         *ReadStateList         `json:"read_state"`
@@ -279,9 +280,11 @@ type GuildScheduledEventUserRemove struct {
 
 // MessageAck is the data for a MessageAck event.
 type MessageAck struct {
-	Version   int    `json:"version"`
-	MessageID string `json:"message_id"`
-	ChannelID string `json:"channel_id"`
+	Version      int    `json:"version"`
+	MessageID    string `json:"message_id"`
+	ChannelID    string `json:"channel_id"`
+	Manual       bool   `json:"manual,omitempty"`
+	MentionCount *int   `json:"mention_count,omitempty"`
 }
 
 // IntegrationCreate is the data for a IntegrationCreate event.
@@ -342,6 +345,13 @@ type MessageReactionAdd struct {
 	Member *Member `json:"member,omitempty"`
 }
 
+type MessageReactionAddMany struct {
+	ChannelID string                  `json:"channel_id"`
+	MessageID string                  `json:"message_id"`
+	GuildID   string                  `json:"guild_id,omitempty"`
+	Reactions []*MessageReactionBatch `json:"reactions"`
+}
+
 // MessageReactionRemove is the data for a MessageReactionRemove event.
 type MessageReactionRemove struct {
 	*MessageReaction
@@ -398,10 +408,11 @@ type ChannelRecipientAdd struct {
 
 // TypingStart is the data for a TypingStart event.
 type TypingStart struct {
-	UserID    string `json:"user_id"`
-	ChannelID string `json:"channel_id"`
-	GuildID   string `json:"guild_id,omitempty"`
-	Timestamp int    `json:"timestamp"`
+	UserID    string  `json:"user_id"`
+	ChannelID string  `json:"channel_id"`
+	GuildID   string  `json:"guild_id,omitempty"`
+	Timestamp int     `json:"timestamp"`
+	Member    *Member `json:"member,omitempty"`
 }
 
 // UserUpdate is the data for a UserUpdate event.

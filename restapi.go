@@ -252,8 +252,11 @@ func (s *Session) RequestWithLockedBucket(method, urlStr, contentType string, b 
 
 	// Not used on initial login..
 	// TODO: Verify if a login, otherwise complain about no-token
-	if s.Token != "" {
-		req.Header.Set("authorization", s.Token)
+	s.tokenLock.RLock()
+	token := s.Token
+	s.tokenLock.RUnlock()
+	if token != "" {
+		req.Header.Set("authorization", token)
 	}
 
 	// Discord's API returns a 400 Bad Request is Content-Type is set, but the
@@ -651,6 +654,28 @@ func (s *Session) UserChannelCreate(recipientID string, options ...RequestOption
 	}
 
 	err = unmarshal(body, &st)
+	return
+}
+
+func (s *Session) GroupDMCreate(recipientIDs []string, options ...RequestOption) (st *Channel, err error) {
+	if recipientIDs == nil {
+		recipientIDs = []string{}
+	}
+	data := struct {
+		Recipients []string `json:"recipients"`
+	}{recipientIDs}
+
+	body, err := s.RequestWithBucketID("POST", EndpointUserChannels("@me"), data, EndpointUserChannels(""), options...)
+	if err != nil {
+		return
+	}
+
+	err = unmarshal(body, &st)
+	return
+}
+
+func (s *Session) ChannelRecipientAdd(channelID, userID string, options ...RequestOption) (err error) {
+	_, err = s.RequestWithBucketID("PUT", EndpointChannelRecipient(channelID, userID), nil, EndpointChannelRecipient(channelID, ""), options...)
 	return
 }
 
@@ -2045,12 +2070,18 @@ func (s *Session) ChannelMessageAck(channelID, messageID, lastToken string) (st 
 // messageID : the ID of a Message
 func (s *Session) ChannelMessageAckNoToken(channelID, messageID string, options ...RequestOption) (st *PtrAck, err error) {
 
-	body, err := s.RequestWithBucketID("POST", EndpointChannelMessageAck(channelID, messageID), &PtrAck{}, EndpointChannelMessageAck(channelID, ""), options...)
+	lastViewed := int(time.Since(time.UnixMilli(SnowflakeEpoch)).Hours() / 24)
+	body, err := s.RequestWithBucketID("POST", EndpointChannelMessageAck(channelID, messageID), &PtrAck{LastViewed: lastViewed}, EndpointChannelMessageAck(channelID, ""), options...)
 	if err != nil {
 		return
 	}
 
 	err = unmarshal(body, &st)
+	return
+}
+
+func (s *Session) ChannelMessageAckManual(channelID, messageID string, mentionCount int, options ...RequestOption) (err error) {
+	_, err = s.RequestWithBucketID("POST", EndpointChannelMessageAck(channelID, messageID), &ManualAck{Manual: true, MentionCount: mentionCount}, EndpointChannelMessageAck(channelID, ""), options...)
 	return
 }
 
