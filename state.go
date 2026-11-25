@@ -15,6 +15,7 @@ package discordgo
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"sync"
 )
@@ -525,6 +526,51 @@ func (s *State) ChannelAdd(channel *Channel) error {
 
 	s.channelMap[channel.ID] = channel
 
+	return nil
+}
+
+func (s *State) ChannelRecipientAdd(channelID string, user *User) error {
+	if s == nil {
+		return ErrNilState
+	}
+	s.Lock()
+	defer s.Unlock()
+	channel, ok := s.channelMap[channelID]
+	if !ok {
+		return ErrStateNotFound
+	}
+	recipients := slices.Clone(channel.Recipients)
+	index := slices.IndexFunc(recipients, func(recipient *User) bool {
+		return recipient != nil && recipient.ID == user.ID
+	})
+	if index < 0 {
+		recipients = append(recipients, user)
+	} else {
+		recipients[index] = user
+	}
+	channel.Recipients = recipients
+	if channel.RecipientIDs != nil && !slices.Contains(channel.RecipientIDs, user.ID) {
+		channel.RecipientIDs = append(slices.Clone(channel.RecipientIDs), user.ID)
+	}
+	return nil
+}
+
+func (s *State) ChannelRecipientRemove(channelID, userID string) error {
+	if s == nil {
+		return ErrNilState
+	}
+	s.Lock()
+	defer s.Unlock()
+	channel, ok := s.channelMap[channelID]
+	if !ok {
+		return ErrStateNotFound
+	}
+	channel.Recipients = slices.DeleteFunc(slices.Clone(channel.Recipients), func(recipient *User) bool {
+		return recipient != nil && recipient.ID == userID
+	})
+	channel.RecipientIDs = slices.DeleteFunc(slices.Clone(channel.RecipientIDs), func(id string) bool {
+		return id == userID
+	})
 	return nil
 }
 
@@ -1142,6 +1188,14 @@ func (s *State) OnInterface(se *Session, i interface{}) (err error) {
 				t.BeforeDelete = &oldCopy
 			}
 			err = s.ChannelRemove(t.Channel)
+		}
+	case *ChannelRecipientAdd:
+		if s.TrackChannels && t.User != nil {
+			err = s.ChannelRecipientAdd(t.ChannelID, t.User)
+		}
+	case *ChannelRecipientRemove:
+		if s.TrackChannels && t.User != nil {
+			err = s.ChannelRecipientRemove(t.ChannelID, t.User.ID)
 		}
 	case *ThreadCreate:
 		if s.TrackThreads {
