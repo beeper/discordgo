@@ -1883,7 +1883,8 @@ type Ack struct {
 
 // An PtrAck is used to ack messages
 type PtrAck struct {
-	Token *string `json:"token"`
+	Token      *string `json:"token"`
+	LastViewed int     `json:"last_viewed,omitempty"`
 }
 
 type ManualAck struct {
@@ -2472,6 +2473,7 @@ type MessageReaction struct {
 	Emoji     Emoji  `json:"emoji"`
 	ChannelID string `json:"channel_id"`
 	GuildID   string `json:"guild_id,omitempty"`
+	Burst     bool   `json:"burst,omitempty"`
 }
 
 type MessageReactionBatch struct {
