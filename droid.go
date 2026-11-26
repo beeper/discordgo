@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -27,16 +28,20 @@ const (
 )
 
 var (
-	droidCapabilities      = 1734653
-	droidClientBuildNumber = 497254
+	droidCapabilities      = 1767421
+	droidClientBuildNumber = 667580
 	droidGatewayURL        = ""
 	mainPageLoaded         = false
+	mainPageLastFailure    time.Time
 )
 
+const mainPageRetryInterval = 10 * time.Minute
+
 var mainPageLoadLock sync.Mutex
+var droidPropsLock sync.RWMutex
 
 const (
-	DroidBrowserMajorVersion = "144"
+	DroidBrowserMajorVersion = "156"
 	DroidBrowserVersion      = DroidBrowserMajorVersion + ".0.0.0"
 	DroidBrowserUserAgent    = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + DroidBrowserVersion + " Safari/537.36"
 )
@@ -47,6 +52,7 @@ type BaseProperties struct {
 	OS                     string          `json:"os"`
 	Browser                string          `json:"browser"`
 	Device                 string          `json:"device"`
+	DeviceModelName        string          `json:"device_model_name"`
 	SystemLocale           string          `json:"system_locale"`
 	HasClientMods          bool            `json:"has_client_mods"`
 	BrowserUserAgent       string          `json:"browser_user_agent"`
@@ -73,9 +79,24 @@ type SuperProperties struct {
 
 // UserIdentifyProperties is sent when IDENTIFYing to the gateway.
 type UserIdentifyProperties struct {
-	BaseProperties
-	IsFastConnect         bool   `json:"is_fast_connect"`
-	GatewayConnectReasons string `json:"gateway_connect_reasons"`
+	OS                     string    `json:"os"`
+	Browser                string    `json:"browser"`
+	Device                 string    `json:"device"`
+	DeviceModelName        string    `json:"device_model_name"`
+	SystemLocale           string    `json:"system_locale"`
+	HasClientMods          bool      `json:"has_client_mods"`
+	BrowserUserAgent       string    `json:"browser_user_agent"`
+	BrowserVersion         string    `json:"browser_version"`
+	OSVersion              string    `json:"os_version"`
+	Referrer               string    `json:"referrer"`
+	ReferringDomain        string    `json:"referring_domain"`
+	ReferrerCurrent        string    `json:"referrer_current"`
+	ReferringDomainCurrent string    `json:"referring_domain_current"`
+	ReleaseChannel         string    `json:"release_channel"`
+	ClientBuildNumber      int       `json:"client_build_number"`
+	ClientEventSource      *string   `json:"client_event_source"`
+	ClientLaunchID         uuid.UUID `json:"client_launch_id"`
+	IsFastConnect          bool      `json:"is_fast_connect"`
 }
 
 type ClientState struct {
@@ -106,15 +127,26 @@ func basedOn(base map[string]string, additional map[string]string) map[string]st
 	return additional
 }
 
+func DroidClientBuildNumber() int {
+	droidPropsLock.RLock()
+	defer droidPropsLock.RUnlock()
+	return droidClientBuildNumber
+}
+
 func (s *Session) UpdateVersion(version, capabilities int) {
+	droidPropsLock.Lock()
 	droidClientBuildNumber = version
 	droidCapabilities = capabilities
 	droidBaseProperties.ClientBuildNumber = version
+	droidPropsLock.Unlock()
 	s.UpdateUserHeaders()
 }
 
 func (s *Session) UpdateUserHeaders() {
+	droidPropsLock.RLock()
 	baseProps := *droidBaseProperties
+	s.Identify.Capabilities = droidCapabilities
+	droidPropsLock.RUnlock()
 	baseProps.LaunchSignature = s.launchSignature
 	baseProps.ClientLaunchID = s.launchID
 
@@ -144,12 +176,26 @@ func (s *Session) UpdateUserHeaders() {
 		superPropsHeader: encodedSuperProps,
 	})
 
-	identifyProps := UserIdentifyProperties{
-		BaseProperties:        baseProps,
-		IsFastConnect:         false,
-		GatewayConnectReasons: "AppSkeleton",
+	s.Identify.Properties = UserIdentifyProperties{
+		OS:                     baseProps.OS,
+		Browser:                baseProps.Browser,
+		Device:                 baseProps.Device,
+		DeviceModelName:        baseProps.DeviceModelName,
+		SystemLocale:           baseProps.SystemLocale,
+		HasClientMods:          baseProps.HasClientMods,
+		BrowserUserAgent:       baseProps.BrowserUserAgent,
+		BrowserVersion:         baseProps.BrowserVersion,
+		OSVersion:              baseProps.OSVersion,
+		Referrer:               baseProps.Referrer,
+		ReferringDomain:        baseProps.ReferringDomain,
+		ReferrerCurrent:        baseProps.ReferrerCurrent,
+		ReferringDomainCurrent: baseProps.ReferringDomainCurrent,
+		ReleaseChannel:         baseProps.ReleaseChannel,
+		ClientBuildNumber:      baseProps.ClientBuildNumber,
+		ClientEventSource:      baseProps.ClientEventSource,
+		ClientLaunchID:         baseProps.ClientLaunchID,
+		IsFastConnect:          true,
 	}
-	s.Identify.Properties = identifyProps
 }
 
 func (s *Session) SetGatewayURL(url string) {
@@ -165,10 +211,24 @@ var buildNumberRegex = regexp.MustCompile(`(?:buildNumber|build_number):\s?['"]?
 func (s *Session) LoadMainPage(ctx context.Context) error {
 	mainPageLoadLock.Lock()
 	defer mainPageLoadLock.Unlock()
-	if mainPageLoaded && droidGatewayURL != "" {
-		s.SetGatewayURL(droidGatewayURL)
+	if mainPageLoaded || time.Since(mainPageLastFailure) < mainPageRetryInterval {
+		if droidGatewayURL != "" {
+			s.SetGatewayURL(droidGatewayURL)
+		}
+		if props, ok := s.Identify.Properties.(UserIdentifyProperties); ok && props.ClientBuildNumber != DroidClientBuildNumber() {
+			s.UpdateUserHeaders()
+		}
 		return nil
 	}
+	if err := s.loadMainPage(ctx); err != nil {
+		mainPageLastFailure = time.Now()
+		return err
+	}
+	mainPageLoaded = true
+	return nil
+}
+
+func (s *Session) loadMainPage(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://discord.com/channels/@me", nil)
 	if err != nil {
 		return fmt.Errorf("failed to prepare request: %w", err)
@@ -218,7 +278,7 @@ func (s *Session) LoadMainPage(ctx context.Context) error {
 		return fmt.Errorf("failed to prepare JS request: %w", err)
 	}
 	for name, value := range DroidBaseHeaders {
-		req.Header.Add(name, value)
+		jsReq.Header.Add(name, value)
 	}
 	jsReq.Header.Set("Sec-Fetch-Dest", "script")
 	jsReq.Header.Set("Sec-Fetch-Mode", "no-cors")
@@ -244,7 +304,6 @@ func (s *Session) LoadMainPage(ctx context.Context) error {
 	s.log(LogInformational, "Found build number %d from JS file %s", buildNumberInt, string(mainJSMatch[1]))
 	// TODO parse capabilities too?
 	s.UpdateVersion(buildNumberInt, droidCapabilities)
-	mainPageLoaded = true
 
 	return nil
 }
@@ -264,7 +323,7 @@ var (
 		ClientAppState:    "focused",
 	}
 	DroidBaseHeaders = map[string]string{
-		"Sec-Ch-Ua":          fmt.Sprintf(`" Not A;Brand";v="99", "Chromium";v="%[1]s", "Google Chrome";v="%[1]s"`, DroidBrowserMajorVersion),
+		"Sec-Ch-Ua":          fmt.Sprintf(`"Not:A-Brand";v="8", "Chromium";v="%[1]s", "Google Chrome";v="%[1]s"`, DroidBrowserMajorVersion),
 		"Sec-Ch-Ua-Mobile":   "?0",
 		"Sec-Ch-Ua-Platform": `"` + droidOS + `"`,
 
