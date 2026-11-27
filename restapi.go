@@ -351,7 +351,7 @@ func (s *Session) RequestWithLockedBucket(method, urlStr, contentType string, b 
 				s.log(LogError, "rate limit unmarshal error, %s", err)
 				return
 			}
-			retryAfter := defaultNonJSONRateLimitRetryAfter
+			retryAfter := defaultNonJSONRateLimitRetryAfter << sequence
 			if seconds, parseErr := strconv.ParseFloat(resp.Header.Get("Retry-After"), 64); parseErr == nil && seconds > 0 {
 				retryAfter = time.Duration(seconds * float64(time.Second))
 			}
